@@ -7,7 +7,7 @@ module
 
 public import Mathlib.RingTheory.RegularLocalRing.AuslanderBuchsbaumSerre
 public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
-public import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
+public import Mathlib.RingTheory.UniqueFactorizationDomain.Kaplansky
 
 /-!
 
@@ -22,7 +22,54 @@ that localization of regular local ring is regular.
 
 universe u v
 
-variable (R : Type u) [CommRing R] [IsDomain R]
+variable (R : Type u) [CommRing R] [IsDomain R] [IsRegularLocalRing R]
+variable (n : ℕ)
 
-instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := by
+#check Ring.KrullDimLE.isField_of_isDomain
+
+notation "m" => IsLocalRing.maximalIdeal
+
+#check (m R)^2
+example (x : R) : CommRing (Localization.Away x) := inferInstance
+
+theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
+    → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
+  /- We will prove the unique factorization property by induction
+    on the dimension of the regular local ring R -/
+  induction n using Nat.strong_induction_on with
+  | h n hn =>
+  intros R _ _ _ hn
+  cases n with
+  /- If dim(R)=0, then R is a field and in particular a UFD -/
+  | zero =>
+  have HHH : Ring.KrullDimLE 0 R := by rw [Ring.krullDimLE_iff, hn]
+  have H : IsField R := Ring.KrullDimLE.isField_of_isDomain
+  have HH : IsPrincipalIdealRing R := IsField.isPrincipalIdealRing H
+  apply PrincipalIdealRing.to_uniqueFactorizationMonoid
+  /- Assume dim(R)>0 -/
+  | succ n =>
+  --let x ∈ m \ m^2
+  have H1 : ∃ x, x ∈ (m R).carrier \ ((m R)^2).carrier  := sorry
+  cases H1 with
+  | intro x hx =>
+  /- then R/(x) is regular -/
+  have Hx : IsRegularLocalRing (R ⧸ Ideal.span {x}) := sorry
+  /- hence a domain -/
+  have Hx' : IsDomain (R ⧸ Ideal.span {x}) := isDomain_of_isRegularLocalRing _
+  /- hence x is a prime element -/
+  have hx_prime : Prime x := sorry
+  rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
+  intros p hp_ne_bot hp_prime
+  /- we see that p_x=(y) for some y ∈ R_x -/
+  have hp_princ : (p.map (algebraMap R (Localization.Away x))).IsPrincipal := sorry
+  /- We can write y=x^ef for some f∈p and e∈Z. -/
+  match hp_princ with
+  | ⟨⟨y, hy⟩⟩ =>
   sorry
+
+
+
+theorem isUniqueFactorizaitonDomainOfDimension (hn : ringKrullDim R = n) :
+    UniqueFactorizationMonoid R := isUniqueFactorizationDomain' n R hn
+
+instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := sorry
