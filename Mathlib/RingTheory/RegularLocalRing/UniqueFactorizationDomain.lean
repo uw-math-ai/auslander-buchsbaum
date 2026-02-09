@@ -77,6 +77,43 @@ theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNo
   exact h_dim.ne' h_krull_dim_zero
 
 
+#check Submodule.IsPrincipal.generator.congr_simp
+#check Submodule.IsPrincipal.prime_generator_of_isPrime
+#check Ideal.span_singleton_prime
+#check Submodule.IsPrincipal.generator
+
+theorem ne_bot_of_height_one : ∀ [CommRing R] (I : Ideal R), I.height = 1 → I ≠ ⊥ := by
+  intros _ _ h_height h_bot
+  rw [h_bot, Ideal.height_bot (R := R)] at h_height
+  cases h_height
+
+theorem iff_height_one_prime_principal :
+  UniqueFactorizationMonoid R ↔ ∀ (I : Ideal R), I.IsPrime → I.height = 1 → I.IsPrincipal := by
+    rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
+    constructor
+    · intros h I h_prime h_height
+      have h_ne := ne_bot_of_height_one R I h_height
+      rcases h I h_ne h_prime with ⟨x, hxI, hxprime⟩
+      have h_eq : I = Ideal.span {x} := by
+        sorry
+      simpa only [h_eq] using instIsPrincipalSpanSingletonSet (R := R)
+    · intros h I h_ne hIprime
+      have hJ : ∃ (J : Ideal R), J ≤ I ∧ J.IsPrime ∧ J.height = 1 := by sorry
+      rcases hJ with ⟨J, hJI, hJprime, h_height⟩
+      have hJ_princ := h J hJprime h_height
+      -- have hJ_princ' := hJ_princ -- help me
+      obtain ⟨x, hx⟩ := hJ_princ
+      -- have x := Submodule.IsPrincipal.generator (R := R) (M := R) J
+      -- have hJne := ne_bot_of_height_one R J h_height
+      -- have x_gen := Submodule.IsPrincipal.prime_generator_of_isPrime J hJne
+      have hx_prime : Prime x := by
+        sorry
+      have hxJ : x ∈ J := by
+        rw [hx, Submodule.mem_span_singleton]
+        exact ⟨(1 : R), one_mul x⟩
+      exact ⟨x, hJI hxJ, hx_prime⟩
+
+
 #check ringKrullDim_quotient_succ_le_of_nonZeroDivisor
 
 
@@ -106,6 +143,13 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
     refine exists_elem_in_maximal_not_in_maximal_sq R Hdim
   cases H1 with
   | intro x hx =>
+
+  -- /- then x is non zero divisor -/
+  -- have HxZeroDiv : x ∈ nonZeroDivisors R := sorry
+  -- /- then dim R/(x) <= dim R - 1 = n -/
+  -- have HxDim : ringKrullDim (R ⧸ Ideal.span {x}) ≤ n := by
+  --   #check ringKrullDim_quotient_succ_le_of_nonZeroDivisor HxZeroDiv
+
   /- then R/(x) is regular -/
   have Hx : IsRegularLocalRing (R ⧸ Ideal.span {x}) := by
     rcases hx with ⟨hx1, hx2⟩
