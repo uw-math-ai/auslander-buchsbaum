@@ -8,6 +8,7 @@ module
 public import Mathlib.RingTheory.RegularLocalRing.AuslanderBuchsbaumSerre
 public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
 public import Mathlib.RingTheory.UniqueFactorizationDomain.Kaplansky
+public import Mathlib.RingTheory.PicardGroup
 
 /-!
 
@@ -26,6 +27,7 @@ variable (R : Type u) [CommRing R] [IsDomain R] [IsRegularLocalRing R]
 variable (n : ℕ)
 
 #check Ring.KrullDimLE.isField_of_isDomain
+#check CommRing.Pic.subsingleton_iff
 
 notation "m" => IsLocalRing.maximalIdeal
 
@@ -37,6 +39,12 @@ example (x : R) : CommRing (Localization.Away x) := inferInstance
 example (x f : R) (n : ℕ) : (Localization.Away x) := Localization.mk f ⟨x^n, ⟨n, rfl⟩⟩
 
 #check WfDvdMonoid.exists_factors
+
+theorem PicSubsingleton (x : R) : Subsingleton (CommRing.Pic (Localization.Away x)) := sorry
+
+theorem invertibleIffLocalizations (M : Type) [AddCommGroup M] [Module R M]
+  : Module.Invertible R M := sorry
+
 
 theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
     → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
