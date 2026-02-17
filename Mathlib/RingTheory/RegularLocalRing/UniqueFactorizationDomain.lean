@@ -142,34 +142,22 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
     exact Nat.zero_lt_succ n
   /- let x ∈ m \ m^2 -/
   have H1 : ∃ x, x ∈ (m R) ∧ x ∉ ((m R)^2) := by
-    refine exists_elem_in_maximal_not_in_maximal_sq R Hdim
+    apply exists_elem_in_maximal_not_in_maximal_sq R Hdim
   cases H1 with
   | intro x hx =>
-
-  -- /- then x is non zero divisor -/
-  -- have HxZeroDiv : x ∈ nonZeroDivisors R := sorry
-  -- /- then dim R/(x) <= dim R - 1 = n -/
-  -- have HxDim : ringKrullDim (R ⧸ Ideal.span {x}) ≤ n := by
-  --   #check ringKrullDim_quotient_succ_le_of_nonZeroDivisor HxZeroDiv
-
   /- then R/(x) is regular -/
   have Hx : IsRegularLocalRing (R ⧸ Ideal.span {x}) := by
-    rcases hx with ⟨hx1, hx2⟩
-    apply quotient_span_singleton at hx1
-    apply hx1 at hx2
-    exact hx2.left
-    -- somehow this one liner doesn't work but apply does...
-    -- exact (quotient_span_singleton hx.left hx.right).left
+    exact (quotient_span_singleton R hx.left hx.right).left
   /- hence a domain -/
   have Hx' : IsDomain (R ⧸ Ideal.span {x}) := isDomain_of_isRegularLocalRing _
   /- hence x is a prime element -/
   have hx_prime : Prime x := by
     rw[Ideal.Quotient.isDomain_iff_prime, Ideal.span_singleton_prime] at Hx'
-    focus exact Hx'
+    · exact Hx'
     intro hx_zero
     rcases hx with ⟨_, hx2⟩
     rw[hx_zero] at hx2
-    exact hx2 (Ideal.zero_mem ((m R)^2))
+    · exact hx2 (Ideal.zero_mem ((m R)^2))
   rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
   intros p hp_ne_bot hp_prime
   /- we see that p_x=(y) for some y ∈ R_x -/
@@ -196,8 +184,6 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
   exact ⟨a', ha'.2, ha'_prime⟩
 
 
-
-theorem isUniqueFactorizaitonDomainOfDimension (hn : ringKrullDim R = n) :
-    UniqueFactorizationMonoid R := isUniqueFactorizationDomain' n R hn
-
-instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := sorry
+instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := by
+  obtain ⟨n, hn⟩ := exist_nat_eq R
+  exact isUniqueFactorizationDomain' n R hn
