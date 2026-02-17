@@ -53,9 +53,9 @@ theorem krull_dim_zero_of_maximal_ideal_zero {R : Type u} [CommRing R] [IsNoethe
         exact le_bot_iff.mp hP_subset;
       rintro ⟨ n, x, hx ⟩;
       rcases n with ( _ | n ) <;> simp_all only [CharP.cast_eq_zero, le_refl]
-      simp_all +decide only [lt_iff_le_and_ne, ne_eq, Set.mem_setOf_eq, Fin.forall_fin_succ,
+      simp_all only [lt_iff_le_and_ne, ne_eq, Set.mem_setOf_eq, Fin.forall_fin_succ,
         Fin.castSucc_zero, Fin.succ_zero_eq_one, Fin.castSucc_succ, Nat.cast_add, Nat.cast_one];
-      exact False.elim ( hx.1.2 ( by ext; simp +decide only [h_prime_zero _ (x 0 |>.2),
+      exact False.elim ( hx.1.2 ( by ext; simp only [h_prime_zero _ (x 0 |>.2),
         Submodule.mem_bot, h_prime_zero _ (x 1 |>.2)] ) );
     · exact ringKrullDim_nonneg_of_nontrivial
 
@@ -178,7 +178,8 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
   match hp_princ with
   | ⟨⟨y, hy⟩⟩ =>
   have hy : ∃ f : R, ∃ e : ℕ,
-      f ∈ p ∧ y * (mk (x^e) ⟨1, one_mem _⟩) = (mk f ⟨1, one_mem _⟩) := sorry
+    f ∈ p ∧ y * (mk (x^e) ⟨1, one_mem _⟩) = (mk f ⟨1, one_mem _⟩) := by
+    sorry
   /- Factor f=a1…ar into irreducible elements of R -/
   rcases hy with ⟨f, e, hfp, hf⟩
   rcases WfDvdMonoid.exists_factors f (sorry : f ≠ 0) with ⟨a, ha_irr, ha_prod⟩
