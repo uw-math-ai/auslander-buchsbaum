@@ -43,7 +43,7 @@ set_option linter.style.longLine false
 -- These two maybe should go into Noeth local ring sections if we keep it
 theorem krull_dim_zero_of_maximal_ideal_zero {R : Type u} [CommRing R] [IsNoetherianRing R] [IsLocalRing R]
   (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
-    refine' le_antisymm ( ciSup_le _ ) _;
+    apply le_antisymm ( ciSup_le _ ) _;
     · -- In this case, every prime ideal of R is the zero ideal.
       have h_prime_zero : ∀ P : Ideal R, P.IsPrime → P = ⊥ := by
         intro P hP
@@ -53,15 +53,17 @@ theorem krull_dim_zero_of_maximal_ideal_zero {R : Type u} [CommRing R] [IsNoethe
         exact le_bot_iff.mp hP_subset;
       rintro ⟨ n, x, hx ⟩;
       rcases n with ( _ | n ) <;> simp_all only [CharP.cast_eq_zero, le_refl]
-      simp_all +decide [ Fin.forall_fin_succ, lt_iff_le_and_ne ];
-      exact False.elim ( hx.1.2 ( by ext; simp +decide [ h_prime_zero _ ( x 0 |>.2 ), h_prime_zero _ ( x 1 |>.2 ) ] ) );
+      simp_all +decide only [lt_iff_le_and_ne, ne_eq, Set.mem_setOf_eq, Fin.forall_fin_succ,
+        Fin.castSucc_zero, Fin.succ_zero_eq_one, Fin.castSucc_succ, Nat.cast_add, Nat.cast_one];
+      exact False.elim ( hx.1.2 ( by ext; simp +decide only [h_prime_zero _ (x 0 |>.2),
+        Submodule.mem_bot, h_prime_zero _ (x 1 |>.2)] ) );
     · exact ringKrullDim_nonneg_of_nontrivial
 
 theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNoetherianRing R] [IsLocalRing R] (h_dim : 0 < ringKrullDim R) : ∃ x ∈ m R, x ∉ (m R) ^ 2 := by
   -- Suppose for contradiction that m = m^2.
   by_contra h_contra
   have h_eq : IsLocalRing.maximalIdeal R = (IsLocalRing.maximalIdeal R)^2 := by
-    refine' le_antisymm _ _
+    apply le_antisymm _ _
     · aesop
     · exact Ideal.pow_le_self two_ne_zero
   -- By Nakayama's Lemma, since m is finitely generated, we have m = 0.
