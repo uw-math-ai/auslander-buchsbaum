@@ -43,21 +43,7 @@ set_option linter.style.longLine false
 -- These two maybe should go into Noeth local ring sections if we keep it
 theorem krull_dim_zero_of_maximal_ideal_zero {R : Type u} [CommRing R] [IsNoetherianRing R] [IsLocalRing R]
   (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
-    apply le_antisymm ( ciSup_le _ ) _;
-    · -- In this case, every prime ideal of R is the zero ideal.
-      have h_prime_zero : ∀ P : Ideal R, P.IsPrime → P = ⊥ := by
-        intro P hP
-        have hP_subset : P ≤ IsLocalRing.maximalIdeal R := by
-          exact IsLocalRing.le_maximalIdeal_of_isPrime P
-        rw [h] at hP_subset
-        exact le_bot_iff.mp hP_subset;
-      rintro ⟨ n, x, hx ⟩;
-      rcases n with ( _ | n ) <;> simp_all only [CharP.cast_eq_zero, le_refl]
-      simp_all only [lt_iff_le_and_ne, ne_eq, Set.mem_setOf_eq, Fin.forall_fin_succ,
-        Fin.castSucc_zero, Fin.succ_zero_eq_one, Fin.castSucc_succ, Nat.cast_add, Nat.cast_one];
-      exact False.elim ( hx.1.2 ( by ext; simp only [h_prime_zero _ (x 0 |>.2),
-        Submodule.mem_bot, h_prime_zero _ (x 1 |>.2)] ) );
-    · exact ringKrullDim_nonneg_of_nontrivial
+    rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
 
 theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNoetherianRing R] [IsLocalRing R] (h_dim : 0 < ringKrullDim R) : ∃ x ∈ m R, x ∉ (m R) ^ 2 := by
   -- Suppose for contradiction that m = m^2.
@@ -67,7 +53,7 @@ theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNo
     · aesop
     · exact Ideal.pow_le_self two_ne_zero
   -- By Nakayama's Lemma, since m is finitely generated, we have m = 0.
-  have h_m_zero : IsLocalRing.maximalIdeal R = 0 := by
+  have h_m_zero : IsLocalRing.maximalIdeal R = ⊥ := by
     apply Submodule.eq_bot_of_le_smul_of_le_jacobson_bot
     any_goals exact IsLocalRing.maximalIdeal R
     · exact IsNoetherian.noetherian _
@@ -75,7 +61,8 @@ theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNo
     · exact IsLocalRing.maximalIdeal_le_jacobson ⊥
   -- If m = 0, then R is a field (or a zero-dimensional local ring).
   have h_krull_dim_zero : ringKrullDim R = 0 := by
-    exact krull_dim_zero_of_maximal_ideal_zero h_m_zero
+    rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h_m_zero, Ideal.height_bot, WithBot.coe_zero]
+    -- exact krull_dim_zero_of_maximal_ideal_zero h_m_zero
   exact h_dim.ne' h_krull_dim_zero
 
 
