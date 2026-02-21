@@ -84,7 +84,18 @@ theorem iff_height_one_prime_principal [IsNoetherianRing R] :
       have h_ne := ne_bot_of_height_one R I h_height
       rcases h I h_ne h_prime with ⟨x, hxI, hxprime⟩
       have h_eq : I = Ideal.span {x} := by
-        sorry
+        have := hxprime.1
+        rw [← Ideal.span_singleton_prime hxprime.1] at hxprime
+        by_contra hC
+        have := Ideal.primeHeight_add_one_le_of_lt <|
+          LE.le.lt_of_ne' (by rwa [Ideal.span_singleton_le_iff_mem]) hC
+        rw[← Ideal.height_eq_primeHeight I, h_height] at this
+        have hx0 : (Ideal.span {x}).primeHeight = 0 := by
+          rw[← ENat.lt_one_iff_eq_zero, ← ENat.add_one_le_iff (ne_of_lt ((Ideal.span {x}).primeHeight_lt_top))]
+          exact this
+        rw [Ideal.primeHeight_eq_zero_iff, IsDomain.minimalPrimes_eq_singleton_bot R,
+          Set.mem_singleton_iff, Ideal.span_singleton_eq_bot] at hx0
+        contradiction
       simpa only [h_eq] using instIsPrincipalSpanSingletonSet (R := R)
     · intros h I h_ne hIprime
       obtain ⟨J, hJI, hJprime, h_height⟩ : ∃ (J : Ideal R), J ≤ I ∧ J.IsPrime ∧ J.height = 1 := by
