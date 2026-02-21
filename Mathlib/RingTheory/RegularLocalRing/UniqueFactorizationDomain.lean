@@ -76,7 +76,7 @@ theorem ne_bot_of_height_one : ∀ [CommRing R] (I : Ideal R), I.height = 1 → 
   rw [h_bot, Ideal.height_bot (R := R)] at h_height
   cases h_height
 
-theorem iff_height_one_prime_principal :
+theorem iff_height_one_prime_principal [IsNoetherianRing R] :
   UniqueFactorizationMonoid R ↔ ∀ (I : Ideal R), I.IsPrime → I.height = 1 → I.IsPrincipal := by
     rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
     constructor
@@ -84,11 +84,40 @@ theorem iff_height_one_prime_principal :
       have h_ne := ne_bot_of_height_one R I h_height
       rcases h I h_ne h_prime with ⟨x, hxI, hxprime⟩
       have h_eq : I = Ideal.span {x} := by
-        sorry
+        have := hxprime.1
+        rw [← Ideal.span_singleton_prime hxprime.1] at hxprime
+        by_contra hC
+        have := Ideal.primeHeight_add_one_le_of_lt <|
+          LE.le.lt_of_ne' (by rwa [Ideal.span_singleton_le_iff_mem]) hC
+        rw[← Ideal.height_eq_primeHeight I, h_height] at this
+        have hx0 : (Ideal.span {x}).primeHeight = 0 := by
+          rw[← ENat.lt_one_iff_eq_zero, ← ENat.add_one_le_iff (ne_of_lt ((Ideal.span {x}).primeHeight_lt_top))]
+          exact this
+        rw [Ideal.primeHeight_eq_zero_iff, IsDomain.minimalPrimes_eq_singleton_bot R,
+          Set.mem_singleton_iff, Ideal.span_singleton_eq_bot] at hx0
+        contradiction
       simpa only [h_eq] using instIsPrincipalSpanSingletonSet (R := R)
     · intros h I h_ne hIprime
-      have hJ : ∃ (J : Ideal R), J ≤ I ∧ J.IsPrime ∧ J.height = 1 := by sorry
-      rcases hJ with ⟨J, hJI, hJprime, h_height⟩
+      obtain ⟨J, hJI, hJprime, h_height⟩ : ∃ (J : Ideal R), J ≤ I ∧ J.IsPrime ∧ J.height = 1 := by
+        by_cases hI : I.primeHeight = 1
+        · use I
+          exact ⟨le_refl I, ⟨hIprime, by rw[I.height_eq_primeHeight]; exact hI⟩⟩
+        let Iₚ : PrimeSpectrum R := ⟨I, hIprime⟩
+        have h1leI : 1 < I.primeHeight := by
+          rw[lt_iff_le_and_ne]
+          refine ⟨?_, by push_neg at hI; exact hI.symm⟩
+          by_contra hC
+          push_neg at hC
+          rw[ENat.lt_one_iff_eq_zero] at hC
+          change Order.height Iₚ = 0 at hC
+          rw[Order.height_eq_zero, isMin_iff_eq_bot] at hC
+          have : Iₚ.asIdeal = ⊥ := by
+            rw[hC]
+            simp_all only [ne_eq, PrimeSpectrum.asIdeal_bot, Iₚ]
+          contradiction
+        obtain ⟨Jₚ, hJₚ⟩ := (Order.coe_lt_height_iff I.primeHeight_lt_top).mp h1leI
+        use Jₚ.asIdeal
+        exact ⟨hJₚ.1.1, ⟨Jₚ.2, by rw[Ideal.height_eq_primeHeight]; exact hJₚ.right⟩⟩
       have hJ_princ := h J hJprime h_height
       -- have hJ_princ' := hJ_princ -- help me
       obtain ⟨x, hx⟩ := hJ_princ
@@ -96,7 +125,12 @@ theorem iff_height_one_prime_principal :
       -- have hJne := ne_bot_of_height_one R J h_height
       -- have x_gen := Submodule.IsPrincipal.prime_generator_of_isPrime J hJne
       have hx_prime : Prime x := by
-        sorry
+        rw[← Ideal.span_singleton_prime]
+        · have : R ∙ x = Ideal.span {x} := by aesop
+          rw[this] at hx; rw[← hx]; exact hJprime
+        by_contra hx0
+        rw[hx, hx0] at h_height
+        simp at h_height
       have hxJ : x ∈ J := by
         rw [hx, Submodule.mem_span_singleton]
         exact ⟨(1 : R), one_mul x⟩
