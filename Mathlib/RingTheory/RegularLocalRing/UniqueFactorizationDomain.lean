@@ -11,7 +11,7 @@ public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
 public import Mathlib.RingTheory.UniqueFactorizationDomain.KaplanskyHeight1
 
 /-!
-
+ guys we should change this
 # Localization of Regular Local Ring is Regular
 
 In this file, we establish the full version of Auslander-Buchsbaum-Serre criterion and its corollary
@@ -40,11 +40,14 @@ example (x f : R) (n : ℕ) : (Localization.Away x) := Localization.mk f ⟨x^n,
 #check WfDvdMonoid.exists_factors
 
 -- These two maybe should go into Noeth local ring sections if we keep it
+/- A local ring with maximal ideal zero is of Krull dimension zero -/
 lemma krull_dim_zero_of_maximal_ideal_zero {R : Type u}
-    [CommRing R] [IsNoetherianRing R] [IsLocalRing R]
-    (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
+    [CommRing R] [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥)
+    : ringKrullDim R = 0 := by
   rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
 
+/- In a Noetherian local ring of dim > 0,
+there exists an element x in m \ m^2 -/
 lemma exists_elem_in_maximal_not_in_maximal_sq (R : Type u)
     [CommRing R] [IsNoetherianRing R] [IsLocalRing R]
     (h_dim : 0 < ringKrullDim R) : ∃ x ∈ m R, x ∉ (m R) ^ 2 := by
@@ -67,7 +70,7 @@ lemma exists_elem_in_maximal_not_in_maximal_sq (R : Type u)
   exact h_dim.ne' h_krull_dim_zero
 
 /- If two height one ideals $p, q$ has containment $p ≤ q$,
-and p is primethen they are equal. q need not necessarily be prime -/
+and p is prime then they are equal. q need not be prime -/
 lemma eq_of_height_one_le_height_one_prime {R : Type u} [CommRing R]
     (p : Ideal R) (q : Ideal R) [hp : p.IsPrime]
     (hph : p.height = 1) (hqh : q.height = 1) (h : p ≤ q) : p = q := by
@@ -86,7 +89,54 @@ lemma eq_of_height_one_le_height_one_prime {R : Type u} [CommRing R]
   rw [hph, hqh] at hp_lt
   contradiction
 
-theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
+/- The span of a prime element in a Noetherian domain is height 1 -/
+theorem height_one_of_prime_element {R : Type u}
+    [CommRing R] [IsDomain R] [IsNoetherianRing R]
+    (p : R) (hp : Prime p) : (Ideal.span {p}).height = 1 := by
+  -- First note that (p) is prime
+  have hp_ne := Prime.ne_zero hp
+  rw [← Ideal.span_singleton_prime hp_ne] at hp
+  apply le_antisymm _ _
+  -- The only minimal prime of (p) is itself
+  · have h_minprime := (Ideal.span {p}).minimalPrimes_eq_subsingleton_self
+    have h_minprime' : Ideal.span {p} ∈ (Ideal.span {p}).minimalPrimes := by aesop
+    -- By Krull's Principal Ideal theorem, (p) has height at most 1
+    exact Ideal.height_le_one_of_isPrincipal_of_mem_minimalPrimes
+      (Ideal.span {p}) (Ideal.span {p}) h_minprime'
+  -- Since R is a domain, non zero prime ideal have positive height
+  · apply height_ge_one_of_prime_ne_bot hp
+    simp [Ideal.span_singleton_eq_bot, hp_ne]
+
+/- If the image of an element is prime after localization, then it is prime -/
+lemma prime_of_prime_in_localization {R : Type u} [CommRing R]
+    (x : R) (a : R) (ax_prime : Prime (algebraMap R (Away x) a)) :
+    Prime a := by
+  -- First note that both a and its image are non-zero
+  have hax_ne := Prime.ne_zero ax_prime
+  have ha_ne : a ≠ 0 := by
+    intro ha
+    apply hax_ne
+    simp only [ha, map_zero]
+  -- So it is equivalent to consider the ideal they span being prime
+  rw [← Ideal.span_singleton_prime hax_ne] at ax_prime
+  rw [← Ideal.span_singleton_prime ha_ne]
+  -- Localization of (a) is prime implies preimage is prime disjoint from x
+  have h := (IsLocalization.isPrime_iff_isPrime_disjoint
+    (M := Submonoid.powers x)
+    (J := Ideal.span {(algebraMap R (Away x)) a})).mp ax_prime
+  -- The preimage of image of prime (a) under localization is (a) itself
+  have heq : Ideal.span {a} = Ideal.comap (algebraMap R (Away x))
+    (Ideal.span {(algebraMap R (Away x)) a}) := by
+    -- #check (IsLocalization.comap_map_of_isPrime_disjoint
+    --   (M := Submonoid.powers x)
+    --   (S := Away x)
+    --   (I := Ideal.span {a}))
+    sorry
+  -- Therefore (a) is prime
+  simpa only [heq] using h.left
+
+/- Main theorem: regular local ring implies UFD -/
+public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
     → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
   /- We will prove the unique factorization property by induction
     on the dimension of the regular local ring R -/
@@ -147,10 +197,9 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
   have ha_gen : Away x ∙ y = Away x ∙ (mk a' ⟨1, one_mem _⟩) := sorry
   have ha'_prime_image : Prime (algebraMap R (Away x) a') := sorry
   /- As x is a prime element, we find that ai is prime in R -/
-  have ha'_prime : Prime a' := sorry
+  have ha'_prime : Prime a' := prime_of_prime_in_localization x a' ha'_prime_image
   /- Note also that <a'> has height 1 -/
-  have ha'_height : (Ideal.span {a'}).height = 1 := by sorry
-    -- something something easy direction of Krull's PIT
+  have ha'_height := height_one_of_prime_element a' ha'_prime
   use a'
   rw [eq_comm]
   rw [← Ideal.span_singleton_prime (Prime.ne_zero ha'_prime)] at ha'_prime

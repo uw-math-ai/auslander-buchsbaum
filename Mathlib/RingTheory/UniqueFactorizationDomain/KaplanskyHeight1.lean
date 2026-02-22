@@ -87,7 +87,7 @@ lemma exists_height_one_le_of_finite_height {R : Type*} [CommRing R] [IsDomain R
   exact ⟨hQ.1.1, ⟨ Q.2, by rw[Ideal.height_eq_primeHeight]; exact hQ.right ⟩⟩
 
 -- Height of non zero prime ideal in a domain is greater than or equal to one
-lemma height_ge_one_of_prime_ne_bot {R : Type*} [CommRing R] [IsDomain R]
+public lemma height_ge_one_of_prime_ne_bot {R : Type*} [CommRing R] [IsDomain R]
     {P : Ideal R} (h_prime : P.IsPrime) (h_ne : P ≠ ⊥) :
     P.height ≥ 1 := by
   -- Suppose P is height 0
