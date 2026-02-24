@@ -7,11 +7,11 @@ module
 
 public import Mathlib.RingTheory.RegularLocalRing.AuslanderBuchsbaumSerre
 public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
-public import Mathlib.RingTheory.UniqueFactorizationDomain.Kaplansky
+public import Mathlib.RingTheory.UniqueFactorizationDomain.KaplanskyHeight1
 public import Mathlib.RingTheory.PicardGroup
 
 /-!
-
+ guys we should change this
 # Localization of Regular Local Ring is Regular
 
 In this file, we establish the full version of Auslander-Buchsbaum-Serre criterion and its corollary
@@ -46,27 +46,19 @@ theorem invertibleIffLocalizations (M : Type) [AddCommGroup M] [Module R M]
   : Module.Invertible R M := sorry
 set_option linter.style.longLine false
 
--- These two maybe should go into Noeth local ring sections if we keep it
-theorem krull_dim_zero_of_maximal_ideal_zero {R : Type u} [CommRing R] [IsNoetherianRing R]
-    [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
-  apply le_antisymm ( ciSup_le _ ) _;
-  · -- In this case, every prime ideal of R is the zero ideal.
-    have h_prime_zero : ∀ P : Ideal R, P.IsPrime → P = ⊥ := by
-      intro P hP
-      have hP_subset : P ≤ IsLocalRing.maximalIdeal R := by
-        exact IsLocalRing.le_maximalIdeal_of_isPrime P
-      rw [h] at hP_subset
-      exact le_bot_iff.mp hP_subset;
-    rintro ⟨ n, x, hx ⟩;
-    rcases n with ( _ | n ) <;> simp_all only [CharP.cast_eq_zero, le_refl]
-    simp_all only [lt_iff_le_and_ne, ne_eq, Set.mem_setOf_eq, Fin.forall_fin_succ,
-      Fin.castSucc_zero, Fin.succ_zero_eq_one, Fin.castSucc_succ, Nat.cast_add, Nat.cast_one];
-    exact False.elim ( hx.1.2 ( by ext; simp only [h_prime_zero _ (x 0 |>.2),
-      Submodule.mem_bot, h_prime_zero _ (x 1 |>.2)] ) );
-  · exact ringKrullDim_nonneg_of_nontrivial
 
-theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNoetherianRing R]
-    [IsLocalRing R] (h_dim : 0 < ringKrullDim R) : ∃ x ∈ m R, x ∉ (m R) ^ 2 := by
+-- These two maybe should go into Noeth local ring sections if we keep it
+/- A local ring with maximal ideal zero is of Krull dimension zero -/
+lemma krull_dim_zero_of_maximal_ideal_zero {R : Type u}
+    [CommRing R] [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥)
+    : ringKrullDim R = 0 := by
+  rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
+
+/- In a Noetherian local ring of dim > 0,
+there exists an element x in m \ m^2 -/
+lemma exists_elem_in_maximal_not_in_maximal_sq (R : Type u)
+    [CommRing R] [IsNoetherianRing R] [IsLocalRing R]
+    (h_dim : 0 < ringKrullDim R) : ∃ x ∈ m R, x ∉ (m R) ^ 2 := by
   -- Suppose for contradiction that m = m^2.
   by_contra h_contra
   have h_eq : IsLocalRing.maximalIdeal R = (IsLocalRing.maximalIdeal R)^2 := by
@@ -74,59 +66,85 @@ theorem exists_elem_in_maximal_not_in_maximal_sq (R : Type u) [CommRing R] [IsNo
     · aesop
     · exact Ideal.pow_le_self two_ne_zero
   -- By Nakayama's Lemma, since m is finitely generated, we have m = 0.
-  have h_m_zero : IsLocalRing.maximalIdeal R = 0 := by
+  have h_m_zero : IsLocalRing.maximalIdeal R = ⊥ := by
     apply Submodule.eq_bot_of_le_smul_of_le_jacobson_bot
     any_goals exact IsLocalRing.maximalIdeal R
     · exact IsNoetherian.noetherian _
     · simpa only [ sq ] using h_eq.le
     · exact IsLocalRing.maximalIdeal_le_jacobson ⊥
-  -- If m = 0, then R is a field (or a zero-dimensional local ring).
+  -- If m = 0, then R is a zero-dimensional local ring.
   have h_krull_dim_zero : ringKrullDim R = 0 := by
     exact krull_dim_zero_of_maximal_ideal_zero h_m_zero
   exact h_dim.ne' h_krull_dim_zero
 
+/- If two height one ideals $p, q$ has containment $p ≤ q$,
+and p is prime then they are equal. q need not be prime -/
+lemma eq_of_height_one_le_height_one_prime {R : Type u} [CommRing R]
+    (p : Ideal R) (q : Ideal R) [hp : p.IsPrime]
+    (hph : p.height = 1) (hqh : q.height = 1) (h : p ≤ q) : p = q := by
+  -- Suppose for contradiction they are not equal
+  by_contra hneq
+  have hneq' : p ≠ q := by
+    simpa [eq_comm] using hneq
+  -- Then p is strictly contained in q
+  have hlt : p < q := lt_of_le_of_ne h hneq'
+  have hp_fin : p.FiniteHeight := by
+    refine (Ideal.finiteHeight_iff p).mpr ?_
+    right
+    simpa only [hph] using ENat.one_ne_top
+  -- Then p is of height < 1 because q is of height 1
+  have hp_lt := Ideal.height_strict_mono_of_is_prime hlt
+  rw [hph, hqh] at hp_lt
+  contradiction
 
-#check Submodule.IsPrincipal.generator.congr_simp
-#check Submodule.IsPrincipal.prime_generator_of_isPrime
-#check Ideal.span_singleton_prime
-#check Submodule.IsPrincipal.generator
+/- The span of a prime element in a Noetherian domain is height 1 -/
+theorem height_one_of_prime_element {R : Type u}
+    [CommRing R] [IsDomain R] [IsNoetherianRing R]
+    (p : R) (hp : Prime p) : (Ideal.span {p}).height = 1 := by
+  -- First note that (p) is prime
+  have hp_ne := Prime.ne_zero hp
+  rw [← Ideal.span_singleton_prime hp_ne] at hp
+  apply le_antisymm _ _
+  -- The only minimal prime of (p) is itself
+  · have h_minprime := (Ideal.span {p}).minimalPrimes_eq_subsingleton_self
+    have h_minprime' : Ideal.span {p} ∈ (Ideal.span {p}).minimalPrimes := by aesop
+    -- By Krull's Principal Ideal theorem, (p) has height at most 1
+    exact Ideal.height_le_one_of_isPrincipal_of_mem_minimalPrimes
+      (Ideal.span {p}) (Ideal.span {p}) h_minprime'
+  -- Since R is a domain, non zero prime ideal have positive height
+  · apply height_ge_one_of_prime_ne_bot hp
+    simp [Ideal.span_singleton_eq_bot, hp_ne]
 
-theorem ne_bot_of_height_one : ∀ [CommRing R] (I : Ideal R), I.height = 1 → I ≠ ⊥ := by
-  intros _ _ h_height h_bot
-  rw [h_bot, Ideal.height_bot (R := R)] at h_height
-  cases h_height
+/- If the image of an element is prime after localization, then it is prime -/
+lemma prime_of_prime_in_localization {R : Type u} [CommRing R]
+    (x : R) (a : R) (ax_prime : Prime (algebraMap R (Away x) a)) :
+    Prime a := by
+  -- First note that both a and its image are non-zero
+  have hax_ne := Prime.ne_zero ax_prime
+  have ha_ne : a ≠ 0 := by
+    intro ha
+    apply hax_ne
+    simp only [ha, map_zero]
+  -- So it is equivalent to consider the ideal they span being prime
+  rw [← Ideal.span_singleton_prime hax_ne] at ax_prime
+  rw [← Ideal.span_singleton_prime ha_ne]
+  -- Localization of (a) is prime implies preimage is prime disjoint from x
+  have h := (IsLocalization.isPrime_iff_isPrime_disjoint
+    (M := Submonoid.powers x)
+    (J := Ideal.span {(algebraMap R (Away x)) a})).mp ax_prime
+  -- The preimage of image of prime (a) under localization is (a) itself
+  have heq : Ideal.span {a} = Ideal.comap (algebraMap R (Away x))
+    (Ideal.span {(algebraMap R (Away x)) a}) := by
+    -- #check (IsLocalization.comap_map_of_isPrime_disjoint
+    --   (M := Submonoid.powers x)
+    --   (S := Away x)
+    --   (I := Ideal.span {a}))
+    sorry
+  -- Therefore (a) is prime
+  simpa only [heq] using h.left
 
-theorem iff_height_one_prime_principal :
-  UniqueFactorizationMonoid R ↔ ∀ (I : Ideal R), I.IsPrime → I.height = 1 → I.IsPrincipal := by
-    rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
-    constructor
-    · intros h I h_prime h_height
-      have h_ne := ne_bot_of_height_one R I h_height
-      rcases h I h_ne h_prime with ⟨x, hxI, hxprime⟩
-      have h_eq : I = Ideal.span {x} := by
-        sorry
-      simpa only [h_eq] using instIsPrincipalSpanSingletonSet (R := R)
-    · intros h I h_ne hIprime
-      have hJ : ∃ (J : Ideal R), J ≤ I ∧ J.IsPrime ∧ J.height = 1 := by sorry
-      rcases hJ with ⟨J, hJI, hJprime, h_height⟩
-      have hJ_princ := h J hJprime h_height
-      -- have hJ_princ' := hJ_princ -- help me
-      obtain ⟨x, hx⟩ := hJ_princ
-      -- have x := Submodule.IsPrincipal.generator (R := R) (M := R) J
-      -- have hJne := ne_bot_of_height_one R J h_height
-      -- have x_gen := Submodule.IsPrincipal.prime_generator_of_isPrime J hJne
-      have hx_prime : Prime x := by
-        sorry
-      have hxJ : x ∈ J := by
-        rw [hx, Submodule.mem_span_singleton]
-        exact ⟨(1 : R), one_mul x⟩
-      exact ⟨x, hJI hxJ, hx_prime⟩
-
-
-#check ringKrullDim_quotient_succ_le_of_nonZeroDivisor
-
-
-theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
+/- Main theorem: regular local ring implies UFD -/
+public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
     → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
   /- We will prove the unique factorization property by induction
     on the dimension of the regular local ring R -/
@@ -149,36 +167,24 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
     exact Nat.zero_lt_succ n
   /- let x ∈ m \ m^2 -/
   have H1 : ∃ x, x ∈ (m R) ∧ x ∉ ((m R)^2) := by
-    refine exists_elem_in_maximal_not_in_maximal_sq R Hdim
+    apply exists_elem_in_maximal_not_in_maximal_sq R Hdim
   cases H1 with
   | intro x hx =>
-
-  -- /- then x is non zero divisor -/
-  -- have HxZeroDiv : x ∈ nonZeroDivisors R := sorry
-  -- /- then dim R/(x) <= dim R - 1 = n -/
-  -- have HxDim : ringKrullDim (R ⧸ Ideal.span {x}) ≤ n := by
-  --   #check ringKrullDim_quotient_succ_le_of_nonZeroDivisor HxZeroDiv
-
   /- then R/(x) is regular -/
   have Hx : IsRegularLocalRing (R ⧸ Ideal.span {x}) := by
-    rcases hx with ⟨hx1, hx2⟩
-    apply quotient_span_singleton at hx1
-    apply hx1 at hx2
-    exact hx2.left
-    -- somehow this one liner doesn't work but apply does...
-    -- exact (quotient_span_singleton hx.left hx.right).left
+    exact (quotient_span_singleton R hx.left hx.right).left
   /- hence a domain -/
   have Hx' : IsDomain (R ⧸ Ideal.span {x}) := isDomain_of_isRegularLocalRing _
   /- hence x is a prime element -/
   have hx_prime : Prime x := by
     rw[Ideal.Quotient.isDomain_iff_prime, Ideal.span_singleton_prime] at Hx'
-    focus exact Hx'
+    · exact Hx'
     intro hx_zero
     rcases hx with ⟨_, hx2⟩
     rw[hx_zero] at hx2
-    exact hx2 (Ideal.zero_mem ((m R)^2))
-  rw [UniqueFactorizationMonoid.iff_exists_prime_mem_of_isPrime]
-  intros p hp_ne_bot hp_prime
+    · exact hx2 (Ideal.zero_mem ((m R)^2))
+  rw [UniqueFactorizationMonoid.iff_height_one_prime_principal]
+  intros p hp_prime hp_height
   /- we see that p_x=(y) for some y ∈ R_x -/
   have hp_princ : (p.map (algebraMap R (Away x))).IsPrincipal := sorry
   /- We can write y=x^ef for some f∈p and e∈Z. -/
@@ -199,14 +205,20 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
   have ha_gen : Away x ∙ y = Away x ∙ (mk a' ⟨1, one_mem _⟩) := sorry
   have ha'_prime_image : Prime (algebraMap R (Away x) a') := sorry
   /- As x is a prime element, we find that ai is prime in R -/
-  have ha'_prime : Prime a' := sorry
-  exact ⟨a', ha'.2, ha'_prime⟩
+  have ha'_prime : Prime a' := prime_of_prime_in_localization x a' ha'_prime_image
+  /- Note also that <a'> has height 1 -/
+  have ha'_height := height_one_of_prime_element a' ha'_prime
+  use a'
+  rw [eq_comm]
+  rw [← Ideal.span_singleton_prime (Prime.ne_zero ha'_prime)] at ha'_prime
+  /- Since <a'> <= p are both height 1 primes, we are done -/
+  apply eq_of_height_one_le_height_one_prime (Ideal.span {a'}) p
+  · exact ha'_height
+  · exact hp_height
+  · rw[Ideal.span_le]
+    aesop
 
 
-
-theorem isUniqueFactorizaitonDomainOfDimension (hn : ringKrullDim R = n) :
-    UniqueFactorizationMonoid R := isUniqueFactorizationDomain' n R hn
-
-
-/- Just need to do some Krull Dim nonsense-/
-instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := sorry
+instance isUniqueFactorizationDomain [IsRegularLocalRing R] : UniqueFactorizationMonoid R := by
+  obtain ⟨n, hn⟩ := exist_nat_eq R
+  exact isUniqueFactorizationDomain' n R hn
