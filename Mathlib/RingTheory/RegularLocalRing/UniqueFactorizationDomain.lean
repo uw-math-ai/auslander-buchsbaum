@@ -115,33 +115,61 @@ theorem height_one_of_prime_element {R : Type u}
   · apply height_ge_one_of_prime_ne_bot hp
     simp [Ideal.span_singleton_eq_bot, hp_ne]
 
-/- If the image of an element is prime after localization, then it is prime -/
-lemma prime_of_prime_in_localization {R : Type u} [CommRing R]
-    (x : R) (a : R) (ax_prime : Prime (algebraMap R (Away x) a)) :
-    Prime a := by
-  -- First note that both a and its image are non-zero
-  have hax_ne := Prime.ne_zero ax_prime
-  have ha_ne : a ≠ 0 := by
-    intro ha
-    apply hax_ne
-    simp only [ha, map_zero]
-  -- So it is equivalent to consider the ideal they span being prime
-  rw [← Ideal.span_singleton_prime hax_ne] at ax_prime
-  rw [← Ideal.span_singleton_prime ha_ne]
-  -- Localization of (a) is prime implies preimage is prime disjoint from x
-  have h := (IsLocalization.isPrime_iff_isPrime_disjoint
-    (M := Submonoid.powers x)
-    (J := Ideal.span {(algebraMap R (Away x)) a})).mp ax_prime
-  -- The preimage of image of prime (a) under localization is (a) itself
-  have heq : Ideal.span {a} = Ideal.comap (algebraMap R (Away x))
-    (Ideal.span {(algebraMap R (Away x)) a}) := by
-    -- #check (IsLocalization.comap_map_of_isPrime_disjoint
-    --   (M := Submonoid.powers x)
-    --   (S := Away x)
-    --   (I := Ideal.span {a}))
-    sorry
-  -- Therefore (a) is prime
-  simpa only [heq] using h.left
+/- Nagata's criterion: If the image of an element is prime after localization, then it is prime -/
+theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
+    (p : R) (hp_prime : Prime p) (x : R) (hx_irred : Irreducible x)
+    (hax_prime : Prime (algebraMap R (Away p) x)) : Prime x := by
+  -- First note that both x and its image are non-zero
+  have hxp_ne := Prime.ne_zero hax_prime
+  have hx_ne : x ≠ 0 := by
+    intro hx
+    apply hxp_ne
+    simp only [hx, map_zero]
+  refine ⟨ hx_ne, Irreducible.not_isUnit hx_irred, fun a b h => ?_ ⟩
+  -- Suppose x | a * b, then in R_p a * b in (x)
+  have habp : algebraMap R (Away p) (a * b) ∈ Ideal.span {algebraMap R (Away p) x} := by
+    have hh : ⇑(algebraMap R (Away p)) '' {x} = {(algebraMap R (Away p)) x} := by aesop
+    rw [← hh, ← Ideal.map_span (algebraMap R (Away p)) {x}]
+    exact Ideal.mem_map_of_mem (algebraMap R (Away p)) (Ideal.mem_span_singleton.mpr h)
+  rw [MulHomClass.map_mul] at habp
+  -- Since (x) is prime, WLOG a in (x)
+  rw [← Ideal.span_singleton_prime hxp_ne] at hax_prime
+  rcases (hax_prime.mem_or_mem habp) with ha | hb
+    -- So p^n * a = x * y for y in R
+  · have hay : ∃ y : R, ∃ n : ℕ, a * p^n = x * y := by
+      sorry -- **should be the same as Dora's first sorry**
+    rcases hay with ⟨ y, n, hay ⟩
+    by_cases hpx : (p ∣ x)
+    -- If p divides x, x is prime since it is irreducible
+    · have hxp_assoc := Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx
+      have hx_prime := hxp_assoc.prime_iff.mp hp_prime
+      exact hx_prime.2.2 a b h
+    -- If p does not divide x, p^n divides y
+    left
+    have hdiv : p^n ∣ x * y := ⟨a, by simpa only [mul_comm] using hay.symm⟩
+    have hpy := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
+    -- Then a is in (x), as desired
+    rcases hpy with ⟨z, rfl⟩
+    simp only [mul_comm, ← mul_assoc] at hay
+    have hp_ne : p ^ n ≠ 0 := pow_ne_zero n (Prime.ne_zero hp_prime)
+    have h := mul_right_cancel₀ hp_ne hay
+    exact ⟨z, h⟩
+  · -- same WLOG proof as above, but can't easily simplify into separate lemma because the by_cases and anti-symmetry
+    have hby : ∃ y : R, ∃ n : ℕ, b * p^n = x * y := by
+      sorry -- **should be the same as Dora's first sorry, and above**
+    rcases hby with ⟨ y, n, hby ⟩
+    by_cases hpx : (p ∣ x)
+    · have hxp_assoc := Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx
+      have hx_prime := hxp_assoc.prime_iff.mp hp_prime
+      exact hx_prime.2.2 a b h
+    right
+    have hdiv : p^n ∣ x * y := ⟨b, by simpa only [mul_comm] using hby.symm⟩
+    have hpy := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
+    rcases hpy with ⟨z, rfl⟩
+    simp only [mul_comm, ← mul_assoc] at hby
+    have hp_ne : p ^ n ≠ 0 := pow_ne_zero n (Prime.ne_zero hp_prime)
+    have h := mul_right_cancel₀ hp_ne hby
+    exact ⟨z, h⟩
 
 /- Main theorem: regular local ring implies UFD -/
 public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
@@ -186,6 +214,7 @@ public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRin
   rw [UniqueFactorizationMonoid.iff_height_one_prime_principal]
   intros p hp_prime hp_height
   /- we see that p_x=(y) for some y ∈ R_x -/
+  -- **Note to Leo: it's probably better to write ∃ y, p_x = Ideal.span {y} instead of p_x.IsPrincipal, which deals with modules**
   have hp_princ : (p.map (algebraMap R (Away x))).IsPrincipal := sorry
   /- We can write y=x^ef for some f∈p and e∈Z. -/
   match hp_princ with
@@ -205,7 +234,8 @@ public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRin
   have ha_gen : Away x ∙ y = Away x ∙ (mk a' ⟨1, one_mem _⟩) := sorry
   have ha'_prime_image : Prime (algebraMap R (Away x) a') := sorry
   /- As x is a prime element, we find that ai is prime in R -/
-  have ha'_prime : Prime a' := prime_of_prime_in_localization x a' ha'_prime_image
+  have ha'_prime : Prime a' := prime_of_prime_in_localization
+    x hx_prime a' (ha_irr a' ha'.left) ha'_prime_image
   /- Note also that <a'> has height 1 -/
   have ha'_height := height_one_of_prime_element a' ha'_prime
   use a'
