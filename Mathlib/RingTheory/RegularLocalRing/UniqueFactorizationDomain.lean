@@ -136,7 +136,11 @@ theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
   rcases (hax_prime.mem_or_mem habp) with ha | hb
     -- So p^n * a = x * y for y in R
   · have hay : ∃ y : R, ∃ n : ℕ, a * p^n = x * y := by
-      sorry
+      obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp ha
+      obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
+      exact ⟨y, n, IsLocalization.injective (Away p)
+        (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
+        (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)⟩
     rcases hay with ⟨ y, n, hay ⟩
     by_cases hpx : (p ∣ x)
     -- If p divides x, x is prime since it is irreducible
@@ -156,7 +160,11 @@ theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
   · -- same WLOG proof as above, but can't easily simplify into
     -- separate lemma because the by_cases and anti-symmetry
     have hby : ∃ y : R, ∃ n : ℕ, b * p^n = x * y := by
-      sorry -- **should be the same as Dora's first sorry, and above**
+      obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hb
+      obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
+      exact ⟨y, n, IsLocalization.injective (Away p)
+        (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
+        (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)⟩
     rcases hby with ⟨ y, n, hby ⟩
     by_cases hpx : (p ∣ x)
     · have hxp_assoc := Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx
