@@ -42,8 +42,12 @@ example (x f : R) (n : ℕ) : (Localization.Away x) := Localization.mk f ⟨x^n,
 
 theorem PicSubsingleton (x : R) : Subsingleton (CommRing.Pic (Localization.Away x)) := sorry
 
-theorem invertibleIffLocalizations (M : Type) [AddCommGroup M] [Module R M]
-  : Module.Invertible R M := sorry
+theorem invertibleIffLocalizations (M : Type u) [AddCommGroup M] [Module R M]
+    (h : Module.Invertible R M) : Module.Free R M := by
+  -- invert => proj is automatic i think by Module.Invertible.instProjective
+  -- if M is invertible R mod then it is automatically f.g. by Module.Invertible.instFinite
+    exact Module.free_of_flat_of_isLocalRing
+
 
 
 -- These two maybe should go into Noeth local ring sections if we keep it
