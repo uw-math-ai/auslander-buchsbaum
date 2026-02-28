@@ -114,6 +114,25 @@ theorem height_one_of_prime_element {R : Type u}
   · apply height_ge_one_of_prime_ne_bot hp
     simp [Ideal.span_singleton_eq_bot, hp_ne]
 
+/- Helper lemma for Nagata's criterion
+If p is prime, p ∤ x, and the image of c in R_p lies in ⟨x⟩, then x ∣ c -/
+private lemma dvd_of_mem_span_singleton_localization {R : Type*} [CommRing R] [IsDomain R]
+    {p : R} (hp_prime : Prime p) {x : R} (hpx : ¬(p ∣ x))
+    {c : R} (hc : algebraMap R (Away p) c ∈ Ideal.span {algebraMap R (Away p) x}) :
+    x ∣ c := by
+  -- p^n * c = x * y for some y in R
+  obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hc
+  obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
+  have hcy : c * p ^ n = x * y := IsLocalization.injective (Away p)
+    (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
+    (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)
+  -- Since p does not divide x, p^n divides y
+  have hdiv : p ^ n ∣ x * y := ⟨c, by simpa only [mul_comm] using hcy.symm⟩
+  obtain ⟨z, rfl⟩ := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
+  -- Then c is in (x), as desired
+  simp only [mul_comm, ← mul_assoc] at hcy
+  exact ⟨z, mul_right_cancel₀ (pow_ne_zero n (Prime.ne_zero hp_prime)) hcy⟩
+
 /- Nagata's criterion: If the image of an element is prime after localization, then it is prime -/
 theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
     (p : R) (hp_prime : Prime p) (x : R) (hx_irred : Irreducible x)
@@ -131,56 +150,18 @@ theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
     rw [← hh, ← Ideal.map_span (algebraMap R (Away p)) {x}]
     exact Ideal.mem_map_of_mem (algebraMap R (Away p)) (Ideal.mem_span_singleton.mpr h)
   rw [MulHomClass.map_mul] at habp
-  -- Since (x) is prime, WLOG a in (x)
   rw [← Ideal.span_singleton_prime hxp_ne] at hax_prime
+  -- If p ∣ x, then x is associated to p and hence prime
+  by_cases hpx : (p ∣ x)
+  · exact (Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx).prime_iff.mp
+      hp_prime |>.2.2 a b h
+  -- Otherwise, apply the helper lemma to whichever of a, b lies in (x) in R_p
   rcases (hax_prime.mem_or_mem habp) with ha | hb
-    -- So p^n * a = x * y for y in R
-  · have hay : ∃ y : R, ∃ n : ℕ, a * p^n = x * y := by
-      obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp ha
-      obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
-      exact ⟨y, n, IsLocalization.injective (Away p)
-        (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
-        (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)⟩
-    rcases hay with ⟨ y, n, hay ⟩
-    by_cases hpx : (p ∣ x)
-    -- If p divides x, x is prime since it is irreducible
-    · have hxp_assoc := Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx
-      have hx_prime := hxp_assoc.prime_iff.mp hp_prime
-      exact hx_prime.2.2 a b h
-    -- If p does not divide x, p^n divides y
-    left
-    have hdiv : p^n ∣ x * y := ⟨a, by simpa only [mul_comm] using hay.symm⟩
-    have hpy := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
-    -- Then a is in (x), as desired
-    rcases hpy with ⟨z, rfl⟩
-    simp only [mul_comm, ← mul_assoc] at hay
-    have hp_ne : p ^ n ≠ 0 := pow_ne_zero n (Prime.ne_zero hp_prime)
-    have h := mul_right_cancel₀ hp_ne hay
-    exact ⟨z, h⟩
-  · -- same WLOG proof as above, but can't easily simplify into
-    -- separate lemma because the by_cases and anti-symmetry
-    have hby : ∃ y : R, ∃ n : ℕ, b * p^n = x * y := by
-      obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hb
-      obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
-      exact ⟨y, n, IsLocalization.injective (Away p)
-        (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
-        (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)⟩
-    rcases hby with ⟨ y, n, hby ⟩
-    by_cases hpx : (p ∣ x)
-    · have hxp_assoc := Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx
-      have hx_prime := hxp_assoc.prime_iff.mp hp_prime
-      exact hx_prime.2.2 a b h
-    right
-    have hdiv : p^n ∣ x * y := ⟨b, by simpa only [mul_comm] using hby.symm⟩
-    have hpy := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
-    rcases hpy with ⟨z, rfl⟩
-    simp only [mul_comm, ← mul_assoc] at hby
-    have hp_ne : p ^ n ≠ 0 := pow_ne_zero n (Prime.ne_zero hp_prime)
-    have h := mul_right_cancel₀ hp_ne hby
-    exact ⟨z, h⟩
+  · exact Or.inl (dvd_of_mem_span_singleton_localization hp_prime hpx ha)
+  · exact Or.inr (dvd_of_mem_span_singleton_localization hp_prime hpx hb)
 
 /- Main theorem: regular local ring implies UFD -/
-public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
+theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
     → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
   /- We will prove the unique factorization property by induction
     on the dimension of the regular local ring R -/
