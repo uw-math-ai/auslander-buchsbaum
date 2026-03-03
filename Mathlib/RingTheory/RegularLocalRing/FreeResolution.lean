@@ -57,7 +57,7 @@ example (com : ChainComplex (ModuleCat R) ℕ) : ∀ i : ℕ, HasHomology com i 
 -/
 section Determinant
 
-variable (R M : Type) [CommRing R] [AddCommGroup M] [Module R M]
+variable (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M]
 
 open Module TensorProduct
 
@@ -77,12 +77,13 @@ end Determinant
 
 section PiTensor
 
-variable (R : Type) [CommRing R]
+variable (R : Type u) [CommRing R]
 
 
 
 #check PiTensorProduct.tmulEquiv
 #check Module.Free.tensor
+#check Module.dual_free
 
 /-
   Annoying lemma: if you take a finite indexed tensor product of
@@ -91,7 +92,7 @@ variable (R : Type) [CommRing R]
   Free.tensor, tmulEquiv
 -/
 
-theorem PiTensorProduct.Free {n : ℕ} (ι : Fin n → Type) [∀ i, AddCommGroup (ι i)]
+theorem PiTensorProduct.Free {n : ℕ} (ι : Fin n → Type u) [∀ i, AddCommGroup (ι i)]
     [∀ i, Module R (ι i)] (hFree : ∀ i, Module.Free R (ι i)) : Module.Free R (⨂[R] i, ι i) := by
   induction n with
   | zero => sorry
@@ -117,10 +118,8 @@ section FiniteFreeRes
 
 open Module
 
-#check Module.Free.tensor
-#check Module.dual_free
 
-variable (R M : Type) [CommRing R] [AddCommGroup M] [Module R M]
+variable (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M]
 
 structure FiniteFreeResolution (n : ℕ) where
   /-- the chain complex involved in the resolution -/
@@ -132,11 +131,6 @@ structure FiniteFreeResolution (n : ℕ) where
   free : ∀ n, Free R (complex.X n)
   bounded : ∃ N, ∀ n > N, IsZero (complex.X n)
 
-variable (S : FiniteFreeResolution R M 5)
-
-variable (M : CommRing.Pic R)
-
-#eval (4 : Fin 10) % 2
 /-
   I think this statement should be correct: if an invertible M admits a finite
   free resolution, then M is free.
