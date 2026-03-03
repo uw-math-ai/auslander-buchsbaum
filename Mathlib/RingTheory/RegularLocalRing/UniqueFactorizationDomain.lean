@@ -42,9 +42,12 @@ example (x f : R) (n : ℕ) : (Localization.Away x) := Localization.mk f ⟨x^n,
 
 theorem PicSubsingleton (x : R) : Subsingleton (CommRing.Pic (Localization.Away x)) := sorry
 
-theorem invertibleIffLocalizations (M : Type) [AddCommGroup M] [Module R M]
-  : Module.Invertible R M := sorry
-set_option linter.style.longLine false
+theorem invertibleIffLocalizations (M : Type u) [AddCommGroup M] [Module R M]
+    (h : Module.Invertible R M) : Module.Free R M := by
+  -- invert => proj is automatic i think by Module.Invertible.instProjective
+  -- if M is invertible R mod then it is automatically f.g. by Module.Invertible.instFinite
+    exact Module.free_of_flat_of_isLocalRing
+
 
 
 -- These two maybe should go into Noeth local ring sections if we keep it
@@ -115,36 +118,54 @@ theorem height_one_of_prime_element {R : Type u}
   · apply height_ge_one_of_prime_ne_bot hp
     simp [Ideal.span_singleton_eq_bot, hp_ne]
 
-/- If the image of an element is prime after localization, then it is prime -/
-lemma prime_of_prime_in_localization {R : Type u} [CommRing R]
-    (x : R) (a : R) (ax_prime : Prime (algebraMap R (Away x) a)) :
-    Prime a := by
-  -- First note that both a and its image are non-zero
-  have hax_ne := Prime.ne_zero ax_prime
-  have ha_ne : a ≠ 0 := by
-    intro ha
-    apply hax_ne
-    simp only [ha, map_zero]
-  -- So it is equivalent to consider the ideal they span being prime
-  rw [← Ideal.span_singleton_prime hax_ne] at ax_prime
-  rw [← Ideal.span_singleton_prime ha_ne]
-  -- Localization of (a) is prime implies preimage is prime disjoint from x
-  have h := (IsLocalization.isPrime_iff_isPrime_disjoint
-    (M := Submonoid.powers x)
-    (J := Ideal.span {(algebraMap R (Away x)) a})).mp ax_prime
-  -- The preimage of image of prime (a) under localization is (a) itself
-  have heq : Ideal.span {a} = Ideal.comap (algebraMap R (Away x))
-    (Ideal.span {(algebraMap R (Away x)) a}) := by
-    -- #check (IsLocalization.comap_map_of_isPrime_disjoint
-    --   (M := Submonoid.powers x)
-    --   (S := Away x)
-    --   (I := Ideal.span {a}))
-    sorry
-  -- Therefore (a) is prime
-  simpa only [heq] using h.left
+/- Helper lemma for Nagata's criterion
+If p is prime, p ∤ x, and the image of c in R_p lies in ⟨x⟩, then x ∣ c -/
+private lemma dvd_of_mem_span_singleton_localization {R : Type*} [CommRing R] [IsDomain R]
+    {p : R} (hp_prime : Prime p) {x : R} (hpx : ¬(p ∣ x))
+    {c : R} (hc : algebraMap R (Away p) c ∈ Ideal.span {algebraMap R (Away p) x}) :
+    x ∣ c := by
+  -- p^n * c = x * y for some y in R
+  obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hc
+  obtain ⟨n, y, hqpn⟩ := IsLocalization.Away.surj p q
+  have hcy : c * p ^ n = x * y := IsLocalization.injective (Away p)
+    (powers_le_nonZeroDivisors_of_noZeroDivisors (Prime.ne_zero hp_prime))
+    (by simp only [map_mul, map_pow]; rw [← hq, ← hqpn]; ring)
+  -- Since p does not divide x, p^n divides y
+  have hdiv : p ^ n ∣ x * y := ⟨c, by simpa only [mul_comm] using hcy.symm⟩
+  obtain ⟨z, rfl⟩ := Prime.pow_dvd_of_dvd_mul_left (n := n) hp_prime hpx hdiv
+  -- Then c is in (x), as desired
+  simp only [mul_comm, ← mul_assoc] at hcy
+  exact ⟨z, mul_right_cancel₀ (pow_ne_zero n (Prime.ne_zero hp_prime)) hcy⟩
+
+/- Nagata's criterion: If the image of an element is prime after localization, then it is prime -/
+theorem prime_of_prime_in_localization {R : Type*} [CommRing R] [IsDomain R]
+    (p : R) (hp_prime : Prime p) (x : R) (hx_irred : Irreducible x)
+    (hax_prime : Prime (algebraMap R (Away p) x)) : Prime x := by
+  -- First note that both x and its image are non-zero
+  have hxp_ne := Prime.ne_zero hax_prime
+  have hx_ne : x ≠ 0 := by
+    intro hx
+    apply hxp_ne
+    simp only [hx, map_zero]
+  refine ⟨ hx_ne, Irreducible.not_isUnit hx_irred, fun a b h => ?_ ⟩
+  -- Suppose x | a * b, then in R_p a * b in (x)
+  have habp : algebraMap R (Away p) (a * b) ∈ Ideal.span {algebraMap R (Away p) x} := by
+    have hh : ⇑(algebraMap R (Away p)) '' {x} = {(algebraMap R (Away p)) x} := by aesop
+    rw [← hh, ← Ideal.map_span (algebraMap R (Away p)) {x}]
+    exact Ideal.mem_map_of_mem (algebraMap R (Away p)) (Ideal.mem_span_singleton.mpr h)
+  rw [MulHomClass.map_mul] at habp
+  rw [← Ideal.span_singleton_prime hxp_ne] at hax_prime
+  -- If p ∣ x, then x is associated to p and hence prime
+  by_cases hpx : (p ∣ x)
+  · exact (Irreducible.associated_of_dvd (Prime.irreducible hp_prime) hx_irred hpx).prime_iff.mp
+      hp_prime |>.2.2 a b h
+  -- Otherwise, apply the helper lemma to whichever of a, b lies in (x) in R_p
+  rcases (hax_prime.mem_or_mem habp) with ha | hb
+  · exact Or.inl (dvd_of_mem_span_singleton_localization hp_prime hpx ha)
+  · exact Or.inr (dvd_of_mem_span_singleton_localization hp_prime hpx hb)
 
 /- Main theorem: regular local ring implies UFD -/
-public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
+theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] → [IsDomain R]
     → [IsRegularLocalRing R] → (ringKrullDim R = n) → UniqueFactorizationMonoid R := by
   /- We will prove the unique factorization property by induction
     on the dimension of the regular local ring R -/
@@ -168,8 +189,7 @@ public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRin
   /- let x ∈ m \ m^2 -/
   have H1 : ∃ x, x ∈ (m R) ∧ x ∉ ((m R)^2) := by
     apply exists_elem_in_maximal_not_in_maximal_sq R Hdim
-  cases H1 with
-  | intro x hx =>
+  rcases H1 with ⟨ x, hx ⟩
   /- then R/(x) is regular -/
   have Hx : IsRegularLocalRing (R ⧸ Ideal.span {x}) := by
     exact (quotient_span_singleton R hx.left hx.right).left
@@ -177,35 +197,91 @@ public theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRin
   have Hx' : IsDomain (R ⧸ Ideal.span {x}) := isDomain_of_isRegularLocalRing _
   /- hence x is a prime element -/
   have hx_prime : Prime x := by
-    rw[Ideal.Quotient.isDomain_iff_prime, Ideal.span_singleton_prime] at Hx'
+    rw [Ideal.Quotient.isDomain_iff_prime, Ideal.span_singleton_prime] at Hx'
     · exact Hx'
     intro hx_zero
     rcases hx with ⟨_, hx2⟩
-    rw[hx_zero] at hx2
+    rw [hx_zero] at hx2
     · exact hx2 (Ideal.zero_mem ((m R)^2))
+  /- hence localization by x is injective -/
+  have hx_ne := Prime.ne_zero hx_prime
+  have hinj := IsLocalization.injective (Away x)
+    (powers_le_nonZeroDivisors_of_noZeroDivisors hx_ne)
+  /- and localization Away x is also a domain -/
+  have hx_domain := IsLocalization.isDomain_localization
+      (powers_le_nonZeroDivisors_of_noZeroDivisors hx_ne)
   rw [UniqueFactorizationMonoid.iff_height_one_prime_principal]
   intros p hp_prime hp_height
+  /- If x is in p, then we are done -/
+  by_cases hxp : x ∈ p
+  · use x
+    have hhxp := (Ideal.span_singleton_le_iff_mem p).mpr hxp
+    have hxs_prime := (Ideal.span_singleton_prime hx_ne).mpr hx_prime
+    exact (eq_of_height_one_le_height_one_prime
+      (Ideal.span {x}) p
+      (height_one_of_prime_element x hx_prime)
+      hp_height hhxp).symm
+  /- Now that x is not in p, the localization p_x is prime -/
+  have hpx_prime : (p.map (algebraMap R (Away x))).IsPrime := by
+    apply IsLocalization.isPrime_of_isPrime_disjoint
+      (Submonoid.powers x) (Localization.Away x) p hp_prime
+    exact (p.disjoint_powers_iff_notMem x hp_prime.isRadical).mpr hxp
   /- we see that p_x=(y) for some y ∈ R_x -/
-  have hp_princ : (p.map (algebraMap R (Away x))).IsPrincipal := sorry
+  have hp_princ : ∃ y, (p.map (algebraMap R (Away x))) = Ideal.span {y} := sorry
+  rcases hp_princ with ⟨y, hy⟩
+  /- Since p is prime, y is also (non-zero and) prime -/
+  have hy_ne : y ≠ 0 := by
+    intro h
+    rw [h, Ideal.span_singleton_eq_bot.mpr rfl] at hy
+    rw [(Ideal.map_eq_bot_iff_of_injective hinj).mp hy, Ideal.height_bot] at hp_height
+    exact zero_ne_one hp_height
+  have hy_prime : Prime y := by
+    rwa [← Ideal.span_singleton_prime hy_ne, ← hy]
   /- We can write y=x^ef for some f∈p and e∈Z. -/
-  match hp_princ with
-  | ⟨⟨y, hy⟩⟩ =>
-  have hy : ∃ f : R, ∃ e : ℕ,
-    f ∈ p ∧ y * (mk (x^e) ⟨1, one_mem _⟩) = (mk f ⟨1, one_mem _⟩) := by
-    sorry
+  obtain ⟨f, e, hfp, hf⟩ : ∃ f : R, ∃ e : ℕ, f ∈ p ∧
+    y * algebraMap R (Away x) (x ^ e) = algebraMap R (Away x) f := by
+    have hmem : y ∈ p.map (algebraMap R (Away x)) := by rw [hy]; exact Ideal.subset_span rfl
+    obtain ⟨⟨a, ⟨_, ⟨e, rfl⟩⟩⟩, hf⟩ :=
+      (IsLocalization.mem_map_algebraMap_iff (Submonoid.powers x) (Away x)).mp hmem
+    exact ⟨a.1, e, a.2, hf⟩
+  /- Since y is non-zero, f is also non-zero. -/
+  have hf_ne : f ≠ 0 := by
+    intro h
+    rw [h, map_zero] at hf
+    have := (mul_eq_zero.mp hf).resolve_left hy_ne
+    exact pow_ne_zero e hx_ne (hinj (this.trans (map_zero _).symm))
   /- Factor f=a1…ar into irreducible elements of R -/
-  rcases hy with ⟨f, e, hfp, hf⟩
-  rcases WfDvdMonoid.exists_factors f (sorry : f ≠ 0) with ⟨a, ha_irr, ha_prod⟩
+  rcases WfDvdMonoid.exists_factors f hf_ne with ⟨a, ha_irr, ha_prod⟩
   /- Since p is prime, we see that ai∈p for some i. -/
-  have ha : ∃ a' ∈ a, a' ∈ p := sorry
+  have ha : ∃ a' ∈ a, a' ∈ p := by
+    have hprod_mem : a.prod ∈ p := by
+      obtain ⟨c, hc⟩ := ha_prod.symm.dvd
+      rw [hc]
+      exact Ideal.mul_mem_right c p hfp
+    exact (hp_prime.multiset_prod_mem_iff_exists_mem a).mp hprod_mem
   rcases ha with ⟨a', ha'⟩
+  /- Therefore a_i | y in R_x -/
+  have ha'f := (Multiset.dvd_prod ha'.left).trans ha_prod.dvd
+  have ha'y : algebraMap R (Away x) a' ∣ y := by
+    have ha'f_x := map_dvd (algebraMap R (Away x)) ha'f
+    have hxe_unit := IsLocalization.map_units (Away x) (⟨x ^ e, ⟨e, rfl⟩⟩ : Submonoid.powers x)
+    rwa [← hf, hxe_unit.dvd_mul_right] at ha'f_x
   /-  Since p_x=(y) is prime and a_i | y in R_x, it follows that
-  p_x is generated by a_i in R_x, i.e., the image of a_i in R_x is prime
-  -/
-  have ha_gen : Away x ∙ y = Away x ∙ (mk a' ⟨1, one_mem _⟩) := sorry
-  have ha'_prime_image : Prime (algebraMap R (Away x) a') := sorry
+  p_x is generated by a_i in R_x -/
+  have ha_gen : Ideal.span {y} = Ideal.span {algebraMap R (Away x) a'} := by
+    apply le_antisymm _ _
+    · exact Ideal.span_singleton_le_span_singleton.mpr ha'y
+    rw [← hy, Ideal.span_singleton_le_iff_mem (Ideal.map (algebraMap R (Away x)) p)]
+    exact Ideal.mem_map_of_mem (algebraMap R (Away x)) ha'.right
+  /- i.e. the image of a_i in R_x is prime -/
+  have ha'_prime_image : Prime (algebraMap R (Away x) a') := by
+    have ha'_ne : (algebraMap R (Away x) a') ≠ 0 := by
+      intro h
+      exact (ha_irr a' ha'.left).ne_zero (hinj (h.trans (map_zero _).symm))
+    rwa [← Ideal.span_singleton_prime ha'_ne, ← ha_gen, ← hy]
   /- As x is a prime element, we find that ai is prime in R -/
-  have ha'_prime : Prime a' := prime_of_prime_in_localization x a' ha'_prime_image
+  have ha'_prime : Prime a' := prime_of_prime_in_localization
+    x hx_prime a' (ha_irr a' ha'.left) ha'_prime_image
   /- Note also that <a'> has height 1 -/
   have ha'_height := height_one_of_prime_element a' ha'_prime
   use a'
