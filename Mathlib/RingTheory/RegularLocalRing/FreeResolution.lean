@@ -5,6 +5,7 @@ public import Mathlib.Algebra.Homology.SingleHomology
 public import Mathlib.Algebra.Category.ModuleCat.Basic
 public import Mathlib.LinearAlgebra.Dimension.Finrank
 public import Mathlib.LinearAlgebra.ExteriorAlgebra.Basic
+public import Mathlib.LinearAlgebra.PiTensorProduct
 public import Mathlib.RingTheory.PicardGroup
 public import Mathlib.RingTheory.Finiteness.Basic
 public import Mathlib.Algebra.Homology.ShortComplex.ShortExact
@@ -21,10 +22,11 @@ of `Z` in degree zero.
 
 @[expose] public section
 
+universe u v
 
 namespace CategoryTheory
 
-open Category Limits ChainComplex HomologicalComplex ModuleCat
+open Category Limits ChainComplex HomologicalComplex ModuleCat TensorProduct
 
 variable {R : Type*} [CommRing R]
 variable (M : Type*) [AddCommGroup M] [Module R M]
@@ -55,18 +57,56 @@ example (com : ChainComplex (ModuleCat R) ℕ) : ∀ i : ℕ, HasHomology com i 
 -/
 section Determinant
 
-variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M]
+variable (R M : Type) [CommRing R] [AddCommGroup M] [Module R M]
 
 open Module TensorProduct
 
 noncomputable
 def det := ⋀[R]^(finrank R M) M
 
---TODO: add finiteness, projectiveness hypotheses so this is actually true
+/-
+  I don't think this is true as written, but it should be true if
+  we add finite rank and locally free hypotheses
+-/
 def det_additive {S : ShortComplex (ModuleCat R)} (hS : S.ShortExact) :
     (det R S.X₁) ⊗[R] (det R S.X₂) ≃ₗ[R] det R S.X₂ := sorry
 
+theorem det_free (hFree : Free R M) (hFinite : Module.Finite R M) : Free R (det R M) := sorry
+
 end Determinant
+
+section PiTensor
+
+variable (R : Type) [CommRing R]
+
+
+
+#check PiTensorProduct.tmulEquiv
+#check Module.Free.tensor
+
+/-
+  Annoying lemma: if you take a finite indexed tensor product of
+  free modules you get a free module.
+  Should follow from induction and the two above lemmas
+  Free.tensor, tmulEquiv
+-/
+
+theorem PiTensorProduct.Free {n : ℕ} (ι : Fin n → Type) [∀ i, AddCommGroup (ι i)]
+    [∀ i, Module R (ι i)] (hFree : ∀ i, Module.Free R (ι i)) : Module.Free R (⨂[R] i, ι i) := by
+  induction n with
+  | zero => sorry
+  | succ n hn =>
+  specialize hn (fun n => ι ⟨n, by simp⟩)
+  specialize hn ?_
+  . intro i
+    apply hFree
+  let H : (⨂[R] (i : Fin n), ι ⟨i, by simp⟩) ⊗[R] (ι ⟨n, by simp⟩) ≃ₗ[R]
+      (⨂[R] (i : Fin (n + 1)), ι i) :=
+    sorry
+  apply Module.Free.of_equiv' ?_ H
+  apply Module.Free.tensor
+
+end PiTensor
 
 
 /-
@@ -80,21 +120,38 @@ open Module
 #check Module.Free.tensor
 #check Module.dual_free
 
-variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M]
+variable (R M : Type) [CommRing R] [AddCommGroup M] [Module R M]
 
 structure FiniteFreeResolution (n : ℕ) where
   /-- the chain complex involved in the resolution -/
   complex : ChainComplex (ModuleCat R) ℕ
-  acyclic : complex.Acyclic
-  /-- the chain complex must be degreewise projective -/
-  zero : complex.X 0 = M
-  finite : ∀ n > 0, Module.Finite R (complex.X n)
-  free : ∀ n > 0, Free R (complex.X n)
+  π : complex ⟶ (ChainComplex.single₀ (ModuleCat R)).obj (ModuleCat.of R M)
+  /-- the morphism to the single chain complex with `Z` in degree `0` is a quasi-isomorphism -/
+  quasiIso : QuasiIso π := by infer_instance
+  finite : ∀ n, Module.Finite R (complex.X n)
+  free : ∀ n, Free R (complex.X n)
   bounded : ∃ N, ∀ n > N, IsZero (complex.X n)
 
 variable (S : FiniteFreeResolution R M 5)
 
+variable (M : CommRing.Pic R)
+
+#eval (4 : Fin 10) % 2
+/-
+  I think this statement should be correct: if an invertible M admits a finite
+  free resolution, then M is free.
+  I need a better way to define the
+-/
 theorem free_of_finite_free_res (hM : Module.Invertible R M) {n : ℕ}
-    (h : Nonempty (FiniteFreeResolution R M n)) : Free R M := sorry
+    (h : Nonempty (FiniteFreeResolution R M n)) : Free R M := by
+  obtain ⟨C⟩ := h
+  let detC := ⨂[R] (i : Fin n), det R (C.complex.X i)
+  have H : detC ≃ₗ[R] M := sorry
+  refine Free.of_equiv' ?_ H
+  apply PiTensorProduct.Free
+  intro i
+  apply det_free R _ (C.free _) (C.finite _)
+
+#check ⨂[R] _, M
 
 end FiniteFreeRes
