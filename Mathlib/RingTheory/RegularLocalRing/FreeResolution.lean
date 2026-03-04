@@ -95,15 +95,24 @@ variable (R : Type u) [CommRing R]
 theorem PiTensorProduct.Free {n : ℕ} (ι : Fin n → Type u) [∀ i, AddCommGroup (ι i)]
     [∀ i, Module R (ι i)] (hFree : ∀ i, Module.Free R (ι i)) : Module.Free R (⨂[R] i, ι i) := by
   induction n with
-  | zero => sorry
+  /- By convention, the empty tensor product is the base ring R -/
+  | zero =>
+  exact Module.Free.of_equiv' (Module.Free.self R) ((PiTensorProduct.isEmptyEquiv (Fin 0)).symm)
   | succ n hn =>
   specialize hn (fun n => ι ⟨n, by simp⟩)
   specialize hn ?_
-  . intro i
+  · intro i
     apply hFree
+  /- Prove equiv: (⨂ Fin n, ι) ⊗ ι n ≃ ⨂ Fin (n+1), ι -/
   let H : (⨂[R] (i : Fin n), ι ⟨i, by simp⟩) ⊗[R] (ι ⟨n, by simp⟩) ≃ₗ[R]
       (⨂[R] (i : Fin (n + 1)), ι i) :=
-    sorry
+    /- (1) Show ι n ≃ ⨂ (Fin 1), ι using subsingletonEquiv and apply to right factor of tensor -/
+    (LinearEquiv.lTensor _
+      (PiTensorProduct.subsingletonEquiv
+        (s := fun j => ι (finSumFinEquiv (Sum.inr j))) (0 : Fin 1)).symm).trans
+      /- (2) merge the two tensor products using tmulEquivDep, then reindex. -/
+      ((PiTensorProduct.tmulEquivDep R (fun i => ι (finSumFinEquiv i))).trans
+        (PiTensorProduct.reindex R ι finSumFinEquiv.symm).symm)
   apply Module.Free.of_equiv' ?_ H
   apply Module.Free.tensor
 
