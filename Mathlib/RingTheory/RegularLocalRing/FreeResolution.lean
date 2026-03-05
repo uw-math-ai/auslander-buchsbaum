@@ -9,6 +9,8 @@ public import Mathlib.LinearAlgebra.PiTensorProduct
 public import Mathlib.RingTheory.PicardGroup
 public import Mathlib.RingTheory.Finiteness.Basic
 public import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+public import Mathlib.LinearAlgebra.ExteriorPower.Basic
+public import Mathlib.LinearAlgebra.Determinant
 
 /-!
 # Projective resolutions
@@ -70,8 +72,58 @@ def det := ⋀[R]^(finrank R M) M
 -/
 def det_additive {S : ShortComplex (ModuleCat R)} (hS : S.ShortExact) :
     (det R S.X₁) ⊗[R] (det R S.X₂) ≃ₗ[R] det R S.X₂ := sorry
+  -- this one will be hard
 
-theorem det_free (hFree : Free R M) (hFinite : Module.Finite R M) : Free R (det R M) := sorry
+-- helper lemma for det free - top wedge product of basis vectors is non-zero
+lemma wedge_ne_zero [Nontrivial R] [Module.Free R M] [Module.Finite R M]
+    [StrongRankCondition R] :
+    let b := Module.Free.chooseBasis R M
+    let e := Fintype.equivFinOfCardEq (finrank_eq_card_chooseBasisIndex R M).symm
+    (exteriorPower.ιMulti R (finrank R M)) (fun i => b (e.symm i)) ≠ 0 := by
+  intro b e
+  let bFin : Basis (Fin (finrank R M)) R M := b.reindex e
+  let f := exteriorPower.alternatingMapLinearEquiv bFin.det
+  intro h
+  have hf_wedge : f ((exteriorPower.ιMulti R (finrank R M)) (fun i => b (e.symm i))) =
+      bFin.det (fun i => b (e.symm i)) :=
+    exteriorPower.alternatingMapLinearEquiv_apply_ιMulti bFin.det (fun i => b (e.symm i))
+  have hf_wedge_zero : f ((exteriorPower.ιMulti R (finrank R M)) (fun i => b (e.symm i))) = 0 := by
+    rw [h]; simp
+  have hdet_ne_zero : bFin.det (fun i => b (e.symm i)) ≠ 0 := by
+    have : (fun i => b (e.symm i)) = ⇑bFin := by
+      ext i
+      simp [bFin, Basis.reindex]
+    rw [this]
+    exact (AlternatingMap.map_basis_ne_zero_iff bFin bFin.det).mpr bFin.det_ne_zero
+  exact hdet_ne_zero (hf_wedge ▸ hf_wedge_zero)
+
+
+-- !!! ADDED STRONG RANK CONDITION, WHICH ONLY WORKS IF THE COMM RING IS NON-TRIVIAL AND NON TRIV R
+theorem det_free [Module.Free R M] [Module.Finite R M] [StrongRankCondition R] [Nontrivial R] :
+    Module.Free R (det R M) := by
+  let b := Module.Free.chooseBasis R M
+  have hrank : finrank R M = Fintype.card (Module.Free.ChooseBasisIndex R M) :=
+    finrank_eq_card_chooseBasisIndex R M
+  let e : Module.Free.ChooseBasisIndex R M ≃ Fin (finrank R M) :=
+    Fintype.equivFinOfCardEq hrank.symm
+  let wedge : det R M :=
+    (exteriorPower.ιMulti R (finrank R M)) (fun i => b (e.symm i))
+  have hwedge_ne_zero : wedge ≠ 0 := wedge_ne_zero R M
+  have hli : LinearIndependent R (fun _ : Fin 1 => wedge) := by
+    sorry
+    --shows {wedge} is lin indep
+  have hspan : ⊤ ≤ Submodule.span R (Set.range (fun _ : Fin 1 => wedge)) := by
+    simp only [Set.range_const]
+    -- shows wedge spans all of det R M,
+    sorry
+  exact Module.Free.of_basis (Basis.mk hli hspan)
+
+
+-- free is a statement that there eixts a basis
+--free means get a basis
+-- since module is finite, basis is finite, use a have statement for this
+--write down ur single element, and then a have statement that u can make a basis
+-- show that wedge product of all ur basis elements is a basis
 
 end Determinant
 
@@ -145,7 +197,9 @@ structure FiniteFreeResolution (n : ℕ) where
   free resolution, then M is free.
   I need a better way to define the
 -/
+-- !!! ADDED STRONG RANK CONDITION, WHICH ONLY WORKS IF THE COMM RING IS NON-TRIVIAL
 theorem free_of_finite_free_res (hM : Module.Invertible R M) {n : ℕ}
+    [StrongRankCondition R] [Nontrivial R]
     (h : Nonempty (FiniteFreeResolution R M n)) : Free R M := by
   obtain ⟨C⟩ := h
   let detC := ⨂[R] (i : Fin n), det R (C.complex.X i)
@@ -153,8 +207,9 @@ theorem free_of_finite_free_res (hM : Module.Invertible R M) {n : ℕ}
   refine Free.of_equiv' ?_ H
   apply PiTensorProduct.Free
   intro i
-  apply det_free R _ (C.free _) (C.finite _)
-
+  haveI : Module.Free R (C.complex.X i) := C.free i
+  haveI : Module.Finite R (C.complex.X i) := C.finite i
+  exact @det_free R (C.complex.X i) _ _ _ _ _ _
 #check ⨂[R] _, M
 
 end FiniteFreeRes
