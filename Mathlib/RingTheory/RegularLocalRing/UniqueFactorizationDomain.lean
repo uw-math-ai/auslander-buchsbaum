@@ -228,6 +228,9 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
     exact (p.disjoint_powers_iff_notMem x hp_prime.isRadical).mpr hxp
   /- we see that p_x=(y) for some y ∈ R_x -/
   have hp_princ : ∃ y, (p.map (algebraMap R (Away x))) = Ideal.span {y} := sorry
+  --when you localize p at x gives you an invertible module
+  --(uses localization + inductive hypothesis)
+  --
   rcases hp_princ with ⟨y, hy⟩
   /- Since p is prime, y is also (non-zero and) prime -/
   have hy_ne : y ≠ 0 := by
