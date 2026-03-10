@@ -132,6 +132,29 @@ structure FiniteFreeResolution (n : ℕ) where
   bounded : ∃ N, ∀ n > N, IsZero (complex.X n)
 
 /-
+  Disgusting code: if _ then M else N doesn't have a R-Module instance,
+  despite M and N having R-Module instances
+-/
+instance (P : Prop) [hP : Decidable P] (M N : Type u) [AddCommGroup M] [AddCommGroup N] :
+    AddCommGroup (if P then M else N) :=
+  match hP with
+  | isFalse h => by simp only [h, ↓reduceIte]; infer_instance
+  | isTrue h => by simp only [h, ↓reduceIte]; infer_instance
+
+instance (P : Prop) [hP : Decidable P] (M N : Type u) [AddCommGroup M] [AddCommGroup N]
+    [Module R M] [Module R N] : Module R (if P then M else N) :=
+  match hP with
+  | isFalse h => by simp only [h, ↓dreduceIte]; infer_instance
+  | isTrue h => by simp only [h, ↓dreduceIte]; infer_instance
+
+/- The alternating sum of determinants of modules in a finite free resolution -/
+abbrev detC {n : ℕ} (C : FiniteFreeResolution R M n) :=
+  ⨂[R] (i : Fin n), if (i.val % 2 = 0) then det R (C.complex.X i)
+      else Dual R (det R (C.complex.X i))
+
+
+#check ite
+/-
   I think this statement should be correct: if an invertible M admits a finite
   free resolution, then M is free.
   I need a better way to define the
@@ -139,13 +162,18 @@ structure FiniteFreeResolution (n : ℕ) where
 theorem free_of_finite_free_res (hM : Module.Invertible R M) {n : ℕ}
     (h : Nonempty (FiniteFreeResolution R M n)) : Free R M := by
   obtain ⟨C⟩ := h
-  let detC := ⨂[R] (i : Fin n), det R (C.complex.X i)
-  have H : detC ≃ₗ[R] M := sorry
+  have H : detC R M C ≃ₗ[R] M := sorry
   refine Free.of_equiv' ?_ H
   apply PiTensorProduct.Free
   intro i
-  apply det_free R _ (C.free _) (C.finite _)
-
-#check ⨂[R] _, M
+  by_cases h : (i.val % 2 = 0)
+  . sorry
+  -- . suffices Free R (det R (C.complex.X i)) from (?_)
+  --   . have HH : ((if ↑i % 2 = 0 then ↥(det R ↑(C.complex.X ↑i)) else Dual R ↥(det R ↑(C.complex.X ↑i)))) =
+  --       ↥(det R ↑(C.complex.X ↑i)) := by
+  --     . sorry
+  --     sorry
+  --   . apply det_free _ _ (C.free _) (C.finite _)
+  . sorry
 
 end FiniteFreeRes
