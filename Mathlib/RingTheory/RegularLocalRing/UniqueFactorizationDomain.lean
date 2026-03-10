@@ -9,6 +9,7 @@ public import Mathlib.RingTheory.RegularLocalRing.AuslanderBuchsbaumSerre
 public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
 public import Mathlib.RingTheory.UniqueFactorizationDomain.Kaplansky
 public import Mathlib.RingTheory.PicardGroup
+public import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 
 /-!
  guys we should change this
@@ -29,10 +30,11 @@ variable (n : ℕ)
 #check Ring.KrullDimLE.isField_of_isDomain
 #check CommRing.Pic.subsingleton_iff
 
-notation "m" => IsLocalRing.maximalIdeal
+local notation "m" => IsLocalRing.maximalIdeal
+local notation M "ₚ" p => LocalizedModule.AtPrime p M
+local notation "Rₚ" => Localization.AtPrime
 
 open Localization
-
 #check (m R)^2
 example (x : R) : CommRing (Localization.Away x) := inferInstance
 /- how to express f/x^n in R_x -/
@@ -42,19 +44,15 @@ example (x f : R) (n : ℕ) : (Localization.Away x) := Localization.mk f ⟨x^n,
 
 theorem PicSubsingleton (x : R) : Subsingleton (CommRing.Pic (Localization.Away x)) := sorry
 
+/- If the localization M_p is free rank one for every prime p, then M is free -/
 theorem invertibleIffLocalizations (M : Type u) [AddCommGroup M] [Module R M]
-    (h : Module.Invertible R M) : Module.Free R M := by
-  -- invert => proj is automatic i think by Module.Invertible.instProjective
-  -- if M is invertible R mod then it is automatically f.g. by Module.Invertible.instFinite
-    exact Module.free_of_flat_of_isLocalRing
-
-
+    (H : ∀ p : Ideal R, [p.IsPrime] → Module.Invertible (Rₚ p) (M ₚ p)) : Module.Invertible R M := by
+    sorry
 
 -- These two maybe should go into Noeth local ring sections if we keep it
 /- A local ring with maximal ideal zero is of Krull dimension zero -/
 lemma krull_dim_zero_of_maximal_ideal_zero {R : Type u}
-    [CommRing R] [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥)
-    : ringKrullDim R = 0 := by
+    [CommRing R] [IsLocalRing R] (h : m R = ⊥) : ringKrullDim R = 0 := by
   rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
 
 /- In a Noetherian local ring of dim > 0,
@@ -227,7 +225,16 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
       (Submonoid.powers x) (Localization.Away x) p hp_prime
     exact (p.disjoint_powers_iff_notMem x hp_prime.isRadical).mpr hxp
   /- we see that p_x=(y) for some y ∈ R_x -/
-  have hp_princ : ∃ y, (p.map (algebraMap R (Away x))) = Ideal.span {y} := sorry
+  have hp_inv : Module.Invertible R p := by
+    apply invertibleIffLocalizations
+    sorry
+  have hp_princ : ∃ y, (p.map (algebraMap R (Away x))) = Ideal.span {y} := by
+    . let p_x := p.map (algebraMap R (Away x))
+      let R_x := Away x
+      have H : Nonempty (p_x ≃ₗ[R_x] R_x) := sorry
+      obtain ⟨F⟩ := H
+      use F.invFun 1
+      sorry
   --when you localize p at x gives you an invertible module
   --(uses localization + inductive hypothesis)
   --
