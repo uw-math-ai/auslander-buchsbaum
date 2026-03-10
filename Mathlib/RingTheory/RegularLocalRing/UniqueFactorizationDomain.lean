@@ -7,7 +7,7 @@ module
 
 public import Mathlib.RingTheory.RegularLocalRing.AuslanderBuchsbaumSerre
 public import Mathlib.RingTheory.RegularLocalRing.GlobalDimension
-public import Mathlib.RingTheory.UniqueFactorizationDomain.KaplanskyHeight1
+public import Mathlib.RingTheory.UniqueFactorizationDomain.Kaplansky
 public import Mathlib.RingTheory.PicardGroup
 
 /-!
@@ -115,7 +115,7 @@ theorem height_one_of_prime_element {R : Type u}
     exact Ideal.height_le_one_of_isPrincipal_of_mem_minimalPrimes
       (Ideal.span {p}) (Ideal.span {p}) h_minprime'
   -- Since R is a domain, non zero prime ideal have positive height
-  · apply height_ge_one_of_prime_ne_bot hp
+  · apply UniqueFactorizationMonoid.height_ge_one_of_prime_ne_bot hp
     simp [Ideal.span_singleton_eq_bot, hp_ne]
 
 /- Helper lemma for Nagata's criterion
