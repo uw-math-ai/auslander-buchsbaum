@@ -271,11 +271,9 @@ public theorem of_height_one_prime_principal : (∀ (I : Ideal R), I.IsPrime →
 if and only if every height one prime is principal -/
 public theorem iff_height_one_prime_principal :
     UniqueFactorizationMonoid R ↔ (∀ (I : Ideal R), I.IsPrime →
-    I.height = 1 → ∃ x : R, I = Ideal.span {x}):= by
-  constructor
-  · intros hR_UFD I hI_prime hI_height
-    exact height_one_prime_principal I hI_height
-  · exact of_height_one_prime_principal
+    I.height = 1 → ∃ x : R, I = Ideal.span {x}):=
+  ⟨fun _ I _ hI_height => height_one_prime_principal I hI_height,
+  of_height_one_prime_principal⟩
 
 end IsNoetherianDomain
 
