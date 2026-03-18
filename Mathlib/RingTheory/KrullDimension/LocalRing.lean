@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Jingting Wang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Haoming Ning, Jingting Wang
+Authors: Jingting Wang
 -/
 module
 
@@ -19,11 +19,6 @@ In this file, we proved some results about the Krull dimension of a local ring.
 public section
 
 variable {R : Type*} [CommRing R]
-
-/-- A local ring whose maximal ideal is the zero ideal has Krull dimension zero. -/
-theorem IsLocalRing.ringKrullDim_eq_zero_of_maximalIdeal_eq_bot
-    [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
-  rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
 
 lemma ringKrullDim_eq_one_iff_of_isLocalRing_isDomain {R : Type*}
     [CommRing R] [IsLocalRing R] [IsDomain R] : ringKrullDim R = 1 ↔ ¬ IsField R ∧
