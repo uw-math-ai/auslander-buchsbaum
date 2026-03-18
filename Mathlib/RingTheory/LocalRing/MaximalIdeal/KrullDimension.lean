@@ -18,32 +18,37 @@ to properties of its maximal ideal.
 
 ## Main results
 
-* `IsLocalRing.ringKrullDim_eq_zero_of_maximalIdeal_eq_bot`: A local ring whose maximal ideal
-  is the zero ideal has Krull dimension zero.
-* `IsLocalRing.exists_mem_maximalIdeal_not_mem_sq`: In a Noetherian local ring of positive Krull
-  dimension, there exists an element in the maximal ideal that is not in its square.
+* `IsLocalRing.ringKrullDim_eq_zero_of_maximalIdeal_eq_bot`:
+  A local ring whose maximal ideal is the zero ideal has Krull dimension zero.
+* `IsLocalRing.exists_mem_maximalIdeal_not_mem_sq`:
+  In a Noetherian local ring of positive Krull dimension,
+  there exists an element in the maximal ideal not in its square.
 -/
 
-public section
+@[expose] public section
 
-variable {R : Type*} [CommRing R]
+namespace IsLocalRing
 
-/-- A local ring whose maximal ideal is the zero ideal has Krull dimension zero. -/
-theorem IsLocalRing.ringKrullDim_eq_zero_of_maximalIdeal_eq_bot
-    [IsLocalRing R] (h : IsLocalRing.maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
-  rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim, h, Ideal.height_bot, WithBot.coe_zero]
+variable {R : Type*} [CommRing R] [IsLocalRing R]
+
+/-- A local ring whose maximal ideal is `⊥` has Krull dimension zero. -/
+theorem ringKrullDim_eq_zero_of_maximalIdeal_eq_bot
+    (h : maximalIdeal R = ⊥) : ringKrullDim R = 0 := by
+  rw [← maximalIdeal_height_eq_ringKrullDim, h,
+    Ideal.height_bot, WithBot.coe_zero]
 
 /-- In a Noetherian local ring of positive Krull dimension,
-there exists an element in the maximal ideal that is not in its square. -/
-theorem IsLocalRing.exists_mem_maximalIdeal_not_mem_sq
-    [IsLocalRing R] [IsNoetherianRing R] (h : 0 < ringKrullDim R) :
-    ∃ x ∈ IsLocalRing.maximalIdeal R, x ∉ (IsLocalRing.maximalIdeal R) ^ 2 := by
+there exists an element in the maximal ideal not in its square. -/
+theorem exists_mem_maximalIdeal_not_mem_sq
+    [IsNoetherianRing R] (h : 0 < ringKrullDim R) :
+    ∃ x ∈ maximalIdeal R, x ∉ (maximalIdeal R) ^ 2 := by
   by_contra h_contra
   push_neg at h_contra
-  have h_eq : IsLocalRing.maximalIdeal R = (IsLocalRing.maximalIdeal R) ^ 2 :=
-    le_antisymm h_contra (Ideal.pow_le_self two_ne_zero)
-  have h_bot : IsLocalRing.maximalIdeal R = ⊥ :=
-    Submodule.eq_bot_of_le_smul_of_le_jacobson_bot (IsLocalRing.maximalIdeal R)
-      (IsLocalRing.maximalIdeal R) (IsNoetherian.noetherian _)
-      (by rwa [Ideal.smul_eq_mul, ← sq]) (IsLocalRing.maximalIdeal_le_jacobson ⊥)
-  exact h.ne' (IsLocalRing.ringKrullDim_eq_zero_of_maximalIdeal_eq_bot h_bot)
+  have := le_antisymm h_contra (Ideal.pow_le_self two_ne_zero)
+  exact h.ne' (ringKrullDim_eq_zero_of_maximalIdeal_eq_bot
+    (Submodule.eq_bot_of_le_smul_of_le_jacobson_bot _ _
+      (IsNoetherian.noetherian _)
+      (by rwa [Ideal.smul_eq_mul, ← sq])
+      (maximalIdeal_le_jacobson ⊥)))
+
+end IsLocalRing
