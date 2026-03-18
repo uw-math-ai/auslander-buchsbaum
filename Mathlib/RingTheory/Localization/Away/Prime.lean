@@ -17,6 +17,14 @@ This file proves a criterion for primality in localization.
 
 * `prime_of_prime_in_localization`: If `p` is prime, `x` is irreducible, and
   `algebraMap R (Away p) x` is prime, then `x` is prime. Also known as Nagata's criterion.
+
+## References
+
+See <https://stacks.math.columbia.edu/tag/0afu> for reference for `prime_of_prime_in_localization`
+
+## Acknowledgements
+
+Thanks to Dora Kassabova and Leopold Mayer for edit suggestions.
 -/
 
 @[expose] public section

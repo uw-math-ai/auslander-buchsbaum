@@ -23,6 +23,10 @@ to properties of its maximal ideal.
 * `IsLocalRing.exists_mem_maximalIdeal_not_mem_sq`:
   In a Noetherian local ring of positive Krull dimension,
   there exists an element in the maximal ideal not in its square.
+
+## Acknowledgements
+
+Thanks to Dora Kassabova and Leopold Mayer for edit suggestions.
 -/
 
 @[expose] public section
