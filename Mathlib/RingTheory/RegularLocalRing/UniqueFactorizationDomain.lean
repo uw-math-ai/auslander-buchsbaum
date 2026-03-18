@@ -46,7 +46,8 @@ theorem PicSubsingleton (x : R) : Subsingleton (CommRing.Pic (Localization.Away 
 
 /- If the localization M_p is free rank one for every prime p, then M is free -/
 theorem invertibleIffLocalizations (M : Type u) [AddCommGroup M] [Module R M]
-    (H : ∀ p : Ideal R, [p.IsPrime] → Module.Invertible (Rₚ p) (M ₚ p)) : Module.Invertible R M := by
+    (H : ∀ p : Ideal R, [p.IsPrime] → Module.Invertible (Rₚ p) (M ₚ p)) :
+    Module.Invertible R M := by
     sorry
 
 -- These two maybe should go into Noeth local ring sections if we keep it
@@ -229,7 +230,7 @@ theorem isUniqueFactorizationDomain' (n : ℕ) : ∀ R : Type u, [CommRing R] �
     apply invertibleIffLocalizations
     sorry
   have hp_princ : ∃ y, (p.map (algebraMap R (Away x))) = Ideal.span {y} := by
-    . let p_x := p.map (algebraMap R (Away x))
+    · let p_x := p.map (algebraMap R (Away x))
       let R_x := Away x
       have H : Nonempty (p_x ≃ₗ[R_x] R_x) := sorry
       obtain ⟨F⟩ := H
