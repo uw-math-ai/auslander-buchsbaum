@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Wanyi He, Jiedong Jiang, Jingting Wang, Andrew Yang, Shouxin Zhang
+Authors: Wanyi He, Jiedong Jiang, Haoming Ning, Jingting Wang, Andrew Yang, Shouxin Zhang
 -/
 module
 
